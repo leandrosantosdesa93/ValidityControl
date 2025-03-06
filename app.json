@@ -1,0 +1,79 @@
+{
+  "expo": {
+    "name": "ValidityControl",
+    "slug": "ValidityControl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00A1DF"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Validity Control precisa acessar suas fotos para adicionar imagens aos produtos.",
+          "cameraPermission": "O Validity Control precisa acessar a câmera para tirar fotos dos produtos.",
+          "androidPermissionText": "O Validity Control precisa da sua permissão para acessar a câmera e fotos"
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "O Validity Control precisa acessar a câmera do seu dispositivo para Adicionar imagem ao produto.",
+        "NSPhotoLibraryUsageDescription": "O Validity Control precisa acessar a galeria do seu dispositivo para Adicionar imagem ao produto."
+      },
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#00A1DF"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#00A1DF"
+      },
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#00A1DF"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.validitycontrol.app",
+      "permissionStrings": {
+        "android.permission.CAMERA": "O Validity Control precisa acessar a câmera para tirar fotos dos produtos",
+        "android.permission.READ_EXTERNAL_STORAGE": "O Validity Control precisa acessar suas fotos para adicionar imagens aos produtos",
+        "android.permission.WRITE_EXTERNAL_STORAGE": "O Validity Control precisa acessar o armazenamento para salvar as fotos dos produtos"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "3562bea7-c7df-4f02-8fc2-e054886d900e"
+      }
+    }
+  }
+}

@@ -1,0 +1,96 @@
+Visão Geral do Sistema
+Desenvolva um aplicativo de gestão de produtos sem necessidade de login, com foco em simplicidade e eficiência para controle de itens perecíveis. O objetivo é permitir que usuários cadastrem, visualizem e gerenciem produtos com alertas inteligentes de validade, garantindo uma experiência intuitiva e funcional.
+
+Funcionalidades Detalhadas
+1. Tela de Cadastro de Produtos
+Campos obrigatórios:
+
+Código:
+
+Gerado automaticamente (formato: PROD-XXXX, onde XXXX são números aleatórios) ou inserção manual.
+
+Validação em tempo real para evitar duplicidades.
+
+Descrição: Campo de texto com limite de 100 caracteres e sugestão de autocompletar baseada em cadastros anteriores.
+
+Validade: Seleção via calendário interativo (bloquear datas anteriores ao dia atual).
+
+Quantidade: Aceitar apenas números inteiros positivos (ex: 1, 50).
+
+Foto opcional:
+
+Permitir upload via câmera ou galeria.
+
+Limitar a 1 foto por produto (redimensionar para 800x600px e compressão para até 300KB).
+
+Validações:
+
+Exibir alerta se a validade for anterior à data atual.
+
+Feedback visual instantâneo para campos inválidos (ex: borda vermelha).
+
+2. Tela de Listagem de Produtos
+Visualização paginada:
+
+Exibir 10 itens por página, com scroll infinito.
+
+Ordenar por data de cadastro (padrão) ou validade (opcional).
+
+Opções por item:
+
+Editar: Ajustar todos os campos (exceto código) e substituir/remover foto.
+
+Excluir: Exigir confirmação em modal (ex: “Tem certeza? Esta ação é irreversível”).
+
+Filtros e busca:
+
+Buscar por código, descrição ou intervalo de validade.
+
+Ícone de "Favorito" para marcar produtos críticos (opcional).
+
+3. Tela de Produtos Próximos ao Vencimento
+Lógica de exibição:
+
+Mostrar produtos com validade entre 1 e 5 dias no futuro.
+
+Atualização automática diária às 8h (considerar fuso horário do dispositivo).
+
+Design diferenciado:
+
+Cores de destaque conforme proximidade:
+
+5 dias: Amarelo.
+
+3 dias: Laranja.
+
+1 dia: Vermelho.
+
+Ações rápidas:
+
+Botão "Renovar Validade" para ajustes emergenciais.
+
+4. Tela de Produtos Vencidos
+Regras de exibição:
+
+Listar produtos com validade igual à data atual.
+
+Adicionar selo "VENCIDO" em vermelho sobre a foto.
+
+Autoexclusão:
+
+Job diário no backend para remover registros após 30 dias do vencimento.
+
+Backup opcional em arquivo .csv antes da exclusão (para auditoria).
+
+5. Sistema de Notificações
+Disparo de alertas:
+
+Notificar 5, 3 e 1 dia(s) antes do vencimento + no dia exato.
+
+Mensagens personalizadas (ex: “Atenção: Arroz integral vence amanhã! Código: PROD-1234”).
+
+Configurações:
+
+Permitir ativar/desativar notificações por produto.
+
+Opção de silenciar alertas entre 22h e 7h.
