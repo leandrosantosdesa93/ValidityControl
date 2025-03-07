@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, FlatList, View, Image, Pressable, Alert } from 'react-native';
+import { StyleSheet, FlatList, View, Image, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@components/ThemedView';
 import { ThemedText } from '@components/ThemedText';
 import { Product } from '@/types/Product';
 import { format, differenceInDays, isAfter, isBefore, addDays, startOfDay, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getProducts } from '@/services/ProductService';
+import { getProducts, deleteProduct } from '@/services/ProductService';
 import { useColorScheme } from '@hooks/useColorScheme';
 import { eventEmitter, PRODUCT_EVENTS } from '@/services/EventEmitter';
 import { Ionicons } from '@expo/vector-icons';
@@ -197,6 +197,40 @@ export default function ExpiringScreen() {
     }
   }
 
+  // Função para marcar um produto como vendido
+  async function handleMarkProductAsSold(code: string) {
+    try {
+      Alert.alert(
+        'Marcar como vendido',
+        'Deseja realmente marcar este produto como vendido? Ele será removido da lista.',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel'
+          },
+          {
+            text: 'Confirmar',
+            onPress: async () => {
+              try {
+                // Usar deleteProduct para remover o produto
+                await deleteProduct(code);
+                // Recarregar a lista de produtos
+                loadProducts();
+                Alert.alert('Sucesso', 'Produto marcado como vendido e removido com sucesso!');
+              } catch (error) {
+                console.error('Erro ao marcar produto como vendido:', error);
+                Alert.alert('Erro', `Não foi possível marcar o produto como vendido: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Erro ao processar marcação de produto vendido:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao tentar marcar o produto como vendido.');
+    }
+  }
+
   function renderProduct({ item }: { item: Product }) {
     const { color, icon, label, textColor } = getExpirationInfo(item.expirationDate);
     const daysUntilExpiration = getDaysUntilExpiration(item.expirationDate);
@@ -263,6 +297,15 @@ export default function ExpiringScreen() {
                 {format(item.expirationDate, "dd 'de' MMMM", { locale: ptBR })}
               </ThemedText>
             </View>
+            
+            {/* Botão de Marcar como Vendido */}
+            <TouchableOpacity 
+              style={styles.soldButton}
+              onPress={() => handleMarkProductAsSold(item.code)}
+            >
+              <Ionicons name="checkmark-circle" size={16} color="#fff" />
+              <ThemedText style={styles.soldButtonText}>Marcar como Vendido</ThemedText>
+            </TouchableOpacity>
           </View>
         </View>
         {isSelectionMode && (
@@ -1000,5 +1043,21 @@ const styles = StyleSheet.create({
   },
   checkboxSelected: {
     opacity: 1,
+  },
+  soldButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8,
+    gap: 6
+  },
+  soldButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold'
   },
 }); 

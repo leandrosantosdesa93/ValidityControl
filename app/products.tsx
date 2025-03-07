@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 8,
   },
   actionButton: {

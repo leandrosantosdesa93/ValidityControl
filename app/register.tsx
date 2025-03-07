@@ -493,7 +493,7 @@ export default function Register() {
               setProductCode(null);
               setOriginalProduct(null);
               
-              // Redirecionar para produtos
+              // Redirecionar para a tela de produtos após editar
               router.push('/products');
             }}]
           );
@@ -529,7 +529,7 @@ export default function Register() {
               setProductCode(null);
               setOriginalProduct(null);
               
-              // Redirecionar para produtos
+              // Redirecionar para a tela de produtos após editar
               router.push('/products');
             }}]
           );
@@ -616,8 +616,7 @@ export default function Register() {
               text: 'OK',
               onPress: () => {
                 console.log('Formulário limpo para cadastrar um novo produto');
-                // Redirecionar para a tela de produtos
-                router.push('/products');
+                // Permanecer na tela de cadastro
               }
             }
           ]
@@ -810,7 +809,7 @@ export default function Register() {
             <ThemedText style={styles.label}>Código do Produto (4 dígitos)</ThemedText>
             <View style={styles.codeInputContainer}>
               <View style={[styles.prefixContainer, { backgroundColor: isDark ? '#333' : '#eee' }]}>
-                <ThemedText style={styles.prefix}>PROD-</ThemedText>
+                <ThemedText style={[styles.prefix, { color: isDark ? '#fff' : '#333' }]}>PROD-</ThemedText>
               </View>
               <TextInput
                 style={[
@@ -870,12 +869,12 @@ export default function Register() {
               placeholderTextColor={isDark ? '#888' : '#999'}
               value={formData.description}
               onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
-              maxLength={30} // Limitar a 30 caracteres
+              maxLength={40} // Limitar a 30 caracteres
             />
             {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 }}>
               <ThemedText style={{ fontSize: 12, color: isDark ? '#aaa' : '#666' }}>
-                {formData.description.length}/30 caracteres
+                {formData.description.length}/40 caracteres
               </ThemedText>
             </View>
           </View>

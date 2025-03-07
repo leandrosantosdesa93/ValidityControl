@@ -8,52 +8,106 @@ import { Product } from '../types/Product';
 
 // Configurar sons diferentes para cada nível de urgência
 const NOTIFICATION_SOUNDS = {
-  urgent: require('@/assets/sounds/urgent.wav'),
-  warning: require('@/assets/sounds/warning.wav'),
-  info: require('@/assets/sounds/info.wav'),
+  urgent: null,
+  warning: null,
+  info: null,
 };
 
 export async function setupNotifications() {
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') {
+  try {
+    console.log('[NotificationService] Configurando permissões de notificação...');
+    
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    console.log('[NotificationService] Status atual de permissões:', existingStatus);
+    
+    let finalStatus = existingStatus;
+    
+    // Solicitar permissões apenas se não foram concedidas
+    if (existingStatus !== 'granted') {
+      console.log('[NotificationService] Solicitando permissões...');
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+      console.log('[NotificationService] Novo status de permissões:', status);
+    }
+    
+    if (finalStatus !== 'granted') {
+      console.warn('[NotificationService] Permissões de notificação não concedidas!');
+      return false;
+    }
+
+    // Configurar canais de notificação para Android
+    if (Platform.OS === 'android') {
+      console.log('[NotificationService] Configurando canais de notificação para Android...');
+      
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Padrão',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#00A1DF',
+      });
+
+      await Notifications.setNotificationChannelAsync('urgent', {
+        name: 'Urgente',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 250, 500],
+        lightColor: '#FF0000',
+      });
+
+      await Notifications.setNotificationChannelAsync('warning', {
+        name: 'Aviso',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FFA500',
+      });
+
+      await Notifications.setNotificationChannelAsync('info', {
+        name: 'Informação',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250],
+        lightColor: '#FFD700',
+      });
+      
+      console.log('[NotificationService] Canais de notificação configurados com sucesso');
+    }
+    
+    // Configurar handler de notificações
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+    
+    console.log('[NotificationService] Notificações configuradas com sucesso!');
+    
+    // Agendar notificações iniciais para todos os produtos
+    const store = useProductStore.getState();
+    const settings = store.notificationSettings;
+    
+    if (settings.enabled) {
+      console.log('[NotificationService] Agendando notificações iniciais para produtos...');
+      
+      // Processar cada produto que tem notificações habilitadas
+      for (const product of store.products) {
+        if (settings.productNotifications[product.code]) {
+          await scheduleProductNotifications(product.code);
+        }
+      }
+      
+      // Agendar notificações de grupo se habilitadas
+      if (settings.groupNotifications) {
+        await scheduleGroupNotifications();
+      }
+    } else {
+      console.log('[NotificationService] Notificações desativadas nas configurações. Pulando agendamento inicial.');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[NotificationService] Erro ao configurar notificações:', error);
     return false;
   }
-
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-
-    // Canais adicionais para diferentes níveis de urgência
-    await Notifications.setNotificationChannelAsync('urgent', {
-      name: 'Urgente',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 500, 250, 500],
-      lightColor: '#FF0000',
-      sound: 'urgent.wav',
-    });
-
-    await Notifications.setNotificationChannelAsync('warning', {
-      name: 'Aviso',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FFA500',
-      sound: 'warning.wav',
-    });
-
-    await Notifications.setNotificationChannelAsync('info', {
-      name: 'Informação',
-      importance: Notifications.AndroidImportance.DEFAULT,
-      vibrationPattern: [0, 250],
-      lightColor: '#FFD700',
-      sound: 'info.wav',
-    });
-  }
-
-  return true;
 }
 
 function isWithinQuietHours(date: Date, start: number, end: number): boolean {
@@ -73,82 +127,106 @@ function getNotificationChannel(daysToExpiry: number): string {
 }
 
 function getNotificationSound(daysToExpiry: number) {
-  if (daysToExpiry <= 1) return NOTIFICATION_SOUNDS.urgent;
-  if (daysToExpiry <= 3) return NOTIFICATION_SOUNDS.warning;
-  return NOTIFICATION_SOUNDS.info;
+  return undefined; // Não usar sons personalizados
 }
 
 export async function scheduleProductNotifications(productId: string) {
-  const store = useProductStore.getState();
-  const product = store.products.find(p => p.code === productId);
-  const settings = store.notificationSettings;
+  try {
+    console.log('[NotificationService] Agendando notificações para produto:', productId);
+    
+    const store = useProductStore.getState();
+    const product = store.products.find(p => p.code === productId);
+    const settings = store.notificationSettings;
 
-  if (!product || !settings.enabled || !settings.productNotifications[productId]) {
-    return;
-  }
+    if (!product) {
+      console.warn('[NotificationService] Produto não encontrado:', productId);
+      return;
+    }
+    
+    if (!settings.enabled) {
+      console.log('[NotificationService] Notificações desativadas nas configurações');
+      return;
+    }
+    
+    if (!settings.productNotifications[productId]) {
+      console.log('[NotificationService] Notificações desativadas para este produto');
+      return;
+    }
 
-  // Cancelar notificações existentes para este produto
-  await cancelProductNotifications(productId);
+    // Cancelar notificações existentes para este produto
+    await cancelProductNotifications(productId);
 
-  const today = new Date();
-  const daysToExpiry = differenceInDays(product.expirationDate, today);
+    const today = new Date();
+    // Garantir que a data de expiração seja um objeto Date válido
+    const expirationDate = typeof product.expirationDate === 'string' 
+      ? new Date(product.expirationDate) 
+      : product.expirationDate;
+      
+    console.log('[NotificationService] Data de expiração do produto:', expirationDate);
+    
+    const daysToExpiry = differenceInDays(expirationDate, today);
+    console.log('[NotificationService] Dias até expirar:', daysToExpiry);
 
-  // Agendar notificações para os dias configurados
-  for (const days of settings.notificationDays) {
-    if (daysToExpiry >= days) {
-      const trigger = new Date(product.expirationDate);
-      trigger.setDate(trigger.getDate() - days);
-      trigger.setHours(8, 0, 0); // Padrão: 8h da manhã
+    // Agendar notificações para os dias configurados
+    for (const days of settings.notificationDays) {
+      if (daysToExpiry >= days) {
+        const trigger = new Date();
+        trigger.setDate(trigger.getDate() + (daysToExpiry - days));
+        trigger.setHours(9, 0, 0); // 9h da manhã para garantir que funcione
+        
+        console.log(`[NotificationService] Agendando notificação para ${days} dias antes: ${trigger.toISOString()}`);
 
-      // Ajustar horário se estiver no período silencioso
-      if (settings.quietHours && isWithinQuietHours(trigger, settings.quietHoursStart, settings.quietHoursEnd)) {
-        trigger.setHours(settings.quietHoursEnd, 0, 0);
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: `Produto ${days <= 1 ? 'URGENTE' : ''} próximo ao vencimento`,
+              body: `Atenção: ${product.description} vence em ${days} dias! Código: ${product.code}`,
+              data: { productId, days }
+            },
+            trigger: {
+              type: SchedulableTriggerInputTypes.DATE,
+              date: trigger
+            },
+          });
+          console.log(`[NotificationService] Notificação agendada com sucesso para ${days} dias antes`);
+        } catch (error) {
+          console.error(`[NotificationService] Erro ao agendar notificação para ${days} dias:`, error);
+        }
       }
-
-      const channel = getNotificationChannel(days);
-      
-      const notificationTrigger: NotificationTriggerInput = {
-        type: SchedulableTriggerInputTypes.DATE,
-        date: trigger
-      };
-      
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `Produto ${days <= 1 ? 'URGENTE' : ''} próximo ao vencimento`,
-          body: `Atenção: ${product.description} vence em ${days} dias! Código: ${product.code}`,
-          sound: settings.soundEnabled ? getNotificationSound(days) : null,
-          data: { productId, days }
-        },
-        trigger: notificationTrigger
-      });
-    }
-  }
-
-  // Notificação no dia do vencimento
-  if (daysToExpiry >= 0) {
-    const trigger = new Date(product.expirationDate);
-    trigger.setHours(8, 0, 0);
-
-    if (settings.quietHours && isWithinQuietHours(trigger, settings.quietHoursStart, settings.quietHoursEnd)) {
-      trigger.setHours(settings.quietHoursEnd, 0, 0);
     }
 
-    const channel = getNotificationChannel(0);
+    // Notificação no dia do vencimento
+    if (daysToExpiry >= 0) {
+      const trigger = new Date();
+      trigger.setDate(trigger.getDate() + daysToExpiry);
+      trigger.setHours(9, 0, 0);
 
-    const notificationTrigger: NotificationTriggerInput = {
-      type: SchedulableTriggerInputTypes.DATE,
-      date: trigger
-    };
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'PRODUTO VENCENDO HOJE!',
-        body: `URGENTE: ${product.description} vence hoje! Código: ${product.code}`,
-        sound: settings.soundEnabled ? NOTIFICATION_SOUNDS.urgent : null,
-        data: { productId, days: 0 }
-      },
-      trigger: notificationTrigger
-    });
+      console.log(`[NotificationService] Agendando notificação para o dia do vencimento: ${trigger.toISOString()}`);
+      
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'PRODUTO VENCENDO HOJE!',
+            body: `URGENTE: ${product.description} vence hoje! Código: ${product.code}`,
+            data: { productId, days: 0 }
+          },
+          trigger: {
+            type: SchedulableTriggerInputTypes.DATE,
+            date: trigger
+          },
+        });
+        console.log('[NotificationService] Notificação do dia do vencimento agendada com sucesso');
+      } catch (error) {
+        console.error('[NotificationService] Erro ao agendar notificação do dia do vencimento:', error);
+      }
+    }
+    
+    // Verificar se as notificações foram agendadas corretamente
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    console.log(`[NotificationService] Total de notificações agendadas: ${scheduled.length}`);
+    
+  } catch (error) {
+    console.error('[NotificationService] Erro ao agendar notificações:', error);
   }
 }
 
@@ -207,7 +285,7 @@ export async function scheduleGroupNotifications() {
         content: {
           title: `${productsArray.length} produtos próximos ao vencimento`,
           body: `Você tem ${productsArray.length} produtos que vencem em ${days} dias`,
-          sound: settings.soundEnabled ? getNotificationSound(daysNum) : null,
+          sound: settings.soundEnabled ? getNotificationSound(daysNum) : undefined,
           data: { isGroup: true, days: daysNum }
         },
         trigger: notificationTrigger
