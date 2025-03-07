@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // URL para download do APK mais recente - Atualize com um link real
-const APK_DOWNLOAD_URL = 'https://expo.dev/accounts/leandro_santos/projects/ValidityControl/builds/79a6f9bb-9748-4cf3-a48e-395ff4ab6c6f';
+const APK_DOWNLOAD_URL = 'https://expo.dev/accounts/leandro_santos/projects/ValidityControl/builds/6189ca9c-6b35-453e-8c26-9f23b34bb6fe';
 
 // Versão mínima exigida (isso pode vir de uma API no futuro)
 // Atualize estes valores quando lançar novas versões
