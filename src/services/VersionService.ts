@@ -8,8 +8,8 @@ const APK_DOWNLOAD_URL = 'https://expo.dev/accounts/leandro_santos/projects/Vali
 // Versão mínima exigida (isso pode vir de uma API no futuro)
 // Atualize estes valores quando lançar novas versões
 const MINIMUM_VERSION = {
-  version: '1.0.2', // Versão semântica
-  versionCode: 3     // Android versionCode
+  version: '1.0.3', // Versão semântica (alterada para testar o modal)
+  versionCode: 4     // Android versionCode (alterado para testar o modal)
 };
 
 // Chave para armazenar quando o usuário foi notificado pela última vez
