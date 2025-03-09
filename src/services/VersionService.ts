@@ -60,16 +60,21 @@ export async function checkAppVersion(): Promise<VersionCheckResult> {
         : String(Constants.expoConfig?.android?.versionCode || '1');
     }
 
-    console.log('[VersionService] Verificando versão do aplicativo:', {
+    // Garantir que as versões estejam em formatos corretos
+    // Remover qualquer espaço ou caractere não permitido
+    currentVersion = currentVersion.trim().replace(/[^0-9.]/g, '');
+    buildNumber = buildNumber.trim().replace(/[^0-9]/g, '');
+    
+    // Garantir que não temos strings vazias
+    if (!currentVersion) currentVersion = '1.0.0';
+    if (!buildNumber) buildNumber = '1';
+
+    console.log('[VersionService] Versão atual normalizada:', {
       currentVersion,
       buildNumber,
       minimumVersion: MINIMUM_VERSION.version,
       minimumBuild: MINIMUM_VERSION.versionCode
     });
-
-    // Em uma implementação real, você poderia obter a versão mínima de uma API
-    // const response = await fetch('https://seusite.com/api/min-version');
-    // const MINIMUM_VERSION = await response.json();
 
     // Comparação de versão
     const needsUpdate = isVersionLower(
@@ -85,8 +90,44 @@ export async function checkAppVersion(): Promise<VersionCheckResult> {
       requiredVersion: `${MINIMUM_VERSION.version} (${MINIMUM_VERSION.versionCode})`
     });
 
+    // DEBUG: Teste direto das versões numéricas
+    const currentParts = currentVersion.split('.').map(Number);
+    const requiredParts = MINIMUM_VERSION.version.split('.').map(Number);
+    
+    console.log('[VersionService] Comparação direta de componentes:', {
+      currentMajor: currentParts[0] || 0,
+      currentMinor: currentParts[1] || 0,
+      currentPatch: currentParts[2] || 0,
+      requiredMajor: requiredParts[0] || 0,
+      requiredMinor: requiredParts[1] || 0,
+      requiredPatch: requiredParts[2] || 0,
+      buildComparison: parseInt(buildNumber, 10) < MINIMUM_VERSION.versionCode
+    });
+
+    // Forçar atualização para versões anteriores a 1.0.4
+    const majorIsLower = (currentParts[0] || 0) < requiredParts[0];
+    const majorEqual = (currentParts[0] || 0) === requiredParts[0];
+    const minorIsLower = (currentParts[1] || 0) < requiredParts[1];
+    const minorEqual = (currentParts[1] || 0) === requiredParts[1];
+    const patchIsLower = (currentParts[2] || 0) < requiredParts[2];
+    
+    const versionIsLower = majorIsLower || 
+                           (majorEqual && minorIsLower) || 
+                           (majorEqual && minorEqual && patchIsLower);
+                           
+    const buildIsLower = parseInt(buildNumber, 10) < MINIMUM_VERSION.versionCode;
+    
+    // Se a versão semântica ou o código de build for menor, precisa atualizar
+    const forcedNeedsUpdate = versionIsLower || buildIsLower;
+    
+    console.log('[VersionService] Verificação manual:', {
+      versionIsLower,
+      buildIsLower,
+      forcedNeedsUpdate
+    });
+
     return {
-      needsUpdate,
+      needsUpdate: forcedNeedsUpdate,  // Usar nossa verificação manual
       currentVersion: `${currentVersion} (${buildNumber})`,
       requiredVersion: `${MINIMUM_VERSION.version} (${MINIMUM_VERSION.versionCode})`,
       downloadUrl: APK_DOWNLOAD_URL
@@ -119,29 +160,45 @@ function isVersionLower(
   });
 
   try {
-    // Primeiro, comparar os números de versão semântica
-    const current = currentVersion.split('.').map(Number);
-    const required = requiredVersion.split('.').map(Number);
+    // Sanitizar as entradas
+    currentVersion = currentVersion.trim();
+    currentBuild = currentBuild.trim();
+    requiredVersion = requiredVersion.trim();
+    requiredBuild = requiredBuild.trim();
+    
+    // Garantir que temos valores válidos
+    if (!currentVersion || !requiredVersion) {
+      console.warn('[VersionService] Versões inválidas para comparação:', { currentVersion, requiredVersion });
+      return true; // Forçar atualização se as versões forem inválidas
+    }
 
-    for (let i = 0; i < Math.max(current.length, required.length); i++) {
-      const a = current[i] || 0;
-      const b = required[i] || 0;
+    // Primeiro, comparar os números de versão semântica
+    const current = currentVersion.split('.').map(part => parseInt(part, 10) || 0);
+    const required = requiredVersion.split('.').map(part => parseInt(part, 10) || 0);
+
+    // Garantir que ambos os arrays tenham pelo menos 3 elementos (major.minor.patch)
+    while (current.length < 3) current.push(0);
+    while (required.length < 3) required.push(0);
+
+    // Comparar major, minor, patch
+    for (let i = 0; i < 3; i++) {
+      const a = current[i];
+      const b = required[i];
 
       if (a < b) {
-        console.log('[VersionService] Versão semântica menor:', a, '<', b);
+        console.log(`[VersionService] Versão semântica menor no componente ${i}: ${a} < ${b}`);
         return true;
       }
       if (a > b) {
-        console.log('[VersionService] Versão semântica maior:', a, '>', b);
+        console.log(`[VersionService] Versão semântica maior no componente ${i}: ${a} > ${b}`);
         return false;
       }
     }
 
-    // Converter para números
-    const currentBuildNum = parseInt(currentBuild, 10);
-    const requiredBuildNum = parseInt(requiredBuild, 10);
-
     // Se as versões semânticas forem iguais, comparar os códigos de compilação
+    const currentBuildNum = parseInt(currentBuild, 10) || 0;
+    const requiredBuildNum = parseInt(requiredBuild, 10) || 0;
+
     const result = currentBuildNum < requiredBuildNum;
     console.log('[VersionService] Comparando builds:', 
       currentBuildNum, 

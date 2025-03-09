@@ -1,5 +1,5 @@
-import React from 'react';
-import { Modal, View, Text, StyleSheet, Linking, Platform, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { Modal, View, Text, StyleSheet, Linking, Platform, TouchableOpacity, Alert, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '@hooks/useColorScheme';
 
@@ -19,6 +19,28 @@ export function UpdateModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Impedir que o usuário feche o app com o botão voltar
+  useEffect(() => {
+    if (isVisible) {
+      console.log('[UpdateModal] Modal de atualização visível, bloqueando botão voltar');
+      
+      const backHandler = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => {
+          // Mostrar alerta explicando que o app precisa ser atualizado
+          Alert.alert(
+            'Atualização Necessária',
+            'É necessário atualizar o aplicativo para continuar utilizando. Por favor, instale a nova versão.',
+            [{ text: 'OK' }]
+          );
+          return true; // Impedir que o botão voltar feche o app
+        }
+      );
+
+      return () => backHandler.remove();
+    }
+  }, [isVisible]);
+
   const handleUpdate = async () => {
     try {
       console.log('[UpdateModal] Abrindo URL de download:', downloadUrl);
@@ -26,6 +48,15 @@ export function UpdateModal({
       
       if (canOpen) {
         await Linking.openURL(downloadUrl);
+        
+        // Mostrar uma mensagem após abrir o link
+        setTimeout(() => {
+          Alert.alert(
+            'Download Iniciado',
+            'O download da nova versão foi iniciado. Após completar, instale o APK para atualizar o aplicativo.',
+            [{ text: 'OK' }]
+          );
+        }, 1000);
       } else {
         console.error('[UpdateModal] Não é possível abrir a URL:', downloadUrl);
         Alert.alert(
@@ -52,13 +83,29 @@ export function UpdateModal({
     }
   };
 
+  // Se o modal não estiver visível, não renderize nada
+  if (!isVisible) return null;
+
+  console.log('[UpdateModal] Renderizando modal de atualização:', {
+    currentVersion,
+    requiredVersion,
+    downloadUrl
+  });
+
   return (
     <Modal
       visible={isVisible}
       transparent={true}
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={() => {/* Não permitir fechar */}}
+      onRequestClose={() => {
+        // Mostrar alerta explicando que o app precisa ser atualizado
+        Alert.alert(
+          'Atualização Necessária',
+          'É necessário atualizar o aplicativo para continuar utilizando. Por favor, instale a nova versão.',
+          [{ text: 'OK' }]
+        );
+      }}
     >
       <View style={styles.modalOverlay}>
         <View style={[
