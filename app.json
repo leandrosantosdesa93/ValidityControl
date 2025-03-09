@@ -28,7 +28,9 @@
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#00A1DF",
-          "sounds": ["./assets/sounds/notification.wav"]
+          "sounds": [
+            "./assets/sounds/notification.wav"
+          ]
         }
       ]
     ],
@@ -82,6 +84,14 @@
     },
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "ValidityControl-v1.0.4"
+      }
     }
   }
 }
