@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Application from 'expo-application';
 
 // URL para download do APK mais recente
-const APK_DOWNLOAD_URL = '';
+const APK_DOWNLOAD_URL = 'https://expo.dev/accounts/leandro_santos/projects/ValidityControl/builds/90576e3a-e64d-49a2-a21d-ae4d198e293d';
 
 // Versão mínima exigida (isso pode vir de uma API no futuro)
 const MINIMUM_VERSION = {
