@@ -23,11 +23,11 @@ export default function AppLayout() {
   useEffect(() => {
     const checkVersion = async () => {
       try {
-        console.log('Verificando atualizações do aplicativo...');
+        console.log('[AppLayout] Verificando atualizações do aplicativo...');
         const result = await checkAppVersion();
         
         if (result.needsUpdate) {
-          console.log('Atualização necessária:', result);
+          console.log('[AppLayout] Atualização necessária:', result);
           setUpdateInfo({
             showUpdateModal: true,
             currentVersion: result.currentVersion,
@@ -35,11 +35,11 @@ export default function AppLayout() {
             downloadUrl: result.downloadUrl
           });
         } else {
-          console.log('Aplicativo está atualizado');
+          console.log('[AppLayout] Aplicativo está atualizado');
           saveVersionCheckTimestamp();
         }
       } catch (error) {
-        console.error('Erro ao verificar versão:', error);
+        console.error('[AppLayout] Erro ao verificar versão:', error);
       }
     };
 

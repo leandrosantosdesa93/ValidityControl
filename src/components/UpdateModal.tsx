@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, StyleSheet, Linking, Platform } from 'react-native';
+import { Modal, View, Text, StyleSheet, Linking, Platform, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '@hooks/useColorScheme';
 
@@ -10,20 +10,45 @@ interface UpdateModalProps {
   downloadUrl: string;
 }
 
-export function UpdateModal({ 
-  isVisible, 
-  currentVersion, 
+export function UpdateModal({
+  isVisible,
+  currentVersion,
   requiredVersion,
-  downloadUrl 
+  downloadUrl
 }: UpdateModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  
+
   const handleUpdate = async () => {
     try {
-      await Linking.openURL(downloadUrl);
+      console.log('[UpdateModal] Abrindo URL de download:', downloadUrl);
+      const canOpen = await Linking.canOpenURL(downloadUrl);
+      
+      if (canOpen) {
+        await Linking.openURL(downloadUrl);
+      } else {
+        console.error('[UpdateModal] Não é possível abrir a URL:', downloadUrl);
+        Alert.alert(
+          'Erro ao Abrir Link',
+          'Não foi possível abrir o link de download. Por favor, acesse manualmente:\n\n' + downloadUrl,
+          [
+            { 
+              text: 'Copiar Link',
+              onPress: () => {
+                // Aqui você pode implementar uma função para copiar o link para a área de transferência
+                Alert.alert('Link copiado!', 'Cole em seu navegador para baixar a atualização.');
+              }
+            },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Erro ao abrir URL de download:', error);
+      console.error('[UpdateModal] Erro ao abrir URL de download:', error);
+      Alert.alert(
+        'Erro ao Atualizar',
+        'Não foi possível abrir a página de download. Por favor, tente novamente mais tarde.'
+      );
     }
   };
 
@@ -66,14 +91,15 @@ export function UpdateModal({
           </Text>
           
           <View style={styles.buttonContainer}>
-            <View style={styles.updateButton}>
-              <Text
-                style={styles.updateButtonText}
-                onPress={handleUpdate}
-              >
+            <TouchableOpacity 
+              style={styles.updateButton}
+              onPress={handleUpdate}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.updateButtonText}>
                 ATUALIZAR AGORA
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

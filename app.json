@@ -2,7 +2,7 @@
   "expo": {
     "name": "ValidityControl",
     "slug": "ValidityControl",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -22,6 +22,14 @@
           "cameraPermission": "O Validity Control precisa acessar a câmera para tirar fotos dos produtos.",
           "androidPermissionText": "O Validity Control precisa da sua permissão para acessar a câmera e fotos"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#00A1DF",
+          "sounds": ["./assets/sounds/notification.wav"]
+        }
       ]
     ],
     "ios": {
@@ -37,7 +45,7 @@
       }
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#00A1DF"
@@ -51,13 +59,20 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
       ],
       "package": "com.validitycontrol.app",
       "permissionStrings": {
         "android.permission.CAMERA": "O Validity Control precisa acessar a câmera para tirar fotos dos produtos",
         "android.permission.READ_EXTERNAL_STORAGE": "O Validity Control precisa acessar suas fotos para adicionar imagens aos produtos",
-        "android.permission.WRITE_EXTERNAL_STORAGE": "O Validity Control precisa acessar o armazenamento para salvar as fotos dos produtos"
+        "android.permission.WRITE_EXTERNAL_STORAGE": "O Validity Control precisa acessar o armazenamento para salvar as fotos dos produtos",
+        "android.permission.POST_NOTIFICATIONS": "O Validity Control precisa enviar notificações sobre produtos a vencer",
+        "android.permission.SCHEDULE_EXACT_ALARM": "O Validity Control precisa agendar notificações para alertá-lo sobre produtos a vencer",
+        "android.permission.RECEIVE_BOOT_COMPLETED": "O Validity Control precisa reiniciar as notificações quando o dispositivo for ligado"
       }
     },
     "web": {
