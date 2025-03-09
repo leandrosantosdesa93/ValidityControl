@@ -2,7 +2,7 @@
   "expo": {
     "name": "ValidityControl",
     "slug": "ValidityControl",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -45,7 +45,7 @@
       }
     },
     "android": {
-      "versionCode": 1,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#00A1DF"
@@ -82,14 +82,6 @@
     },
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "3562bea7-c7df-4f02-8fc2-e054886d900e"
-      }
     }
   }
 }
