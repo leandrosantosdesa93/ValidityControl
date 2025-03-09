@@ -10,6 +10,7 @@ type ProductFormData = {
   expirationDate: Date;
   quantity: number;
   photoUri?: string;
+  code?: string;
 };
 
 function generateProductCode(): string {
