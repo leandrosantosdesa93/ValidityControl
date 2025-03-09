@@ -88,9 +88,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "ValidityControl-v1.0.4"
       }
     }
   }
