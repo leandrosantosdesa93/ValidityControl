@@ -30,12 +30,22 @@
       "infoPlist": {
         "NSCameraUsageDescription": "O Validity Control precisa acessar a câmera do seu dispositivo para Adicionar imagem ao produto.",
         "NSPhotoLibraryUsageDescription": "O Validity Control precisa acessar a galeria do seu dispositivo para Adicionar imagem ao produto."
+      },
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#00A1DF"
       }
     },
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#00A1DF"
+      },
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
         "backgroundColor": "#00A1DF"
       },
       "permissions": [

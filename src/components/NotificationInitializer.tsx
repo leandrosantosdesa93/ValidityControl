@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Alert, View, Text } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Linking } from 'react-native';
 import { useProductStore } from '../store/productStore';
@@ -10,11 +10,7 @@ import {
 } from '../services/notifications';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from '@hooks/useColorScheme';
 import Constants from 'expo-constants';
-
-// Garantir que o SplashScreen fique visível até terminarmos a inicialização
-SplashScreen.preventAutoHideAsync();
 
 // Verificar se estamos executando no Expo Go
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -32,17 +28,17 @@ Notifications.setNotificationHandler({
 export function NotificationInitializer() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initStatus, setInitStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   // Acesso ao store
   const store = useProductStore();
   const settings = store.notificationSettings;
 
-  // Inicializar o sistema de atualização automática (se não estiver no Expo Go)
+  // Inicializar o sistema de atualização automática
   useEffect(() => {
-    if (!isExpoGo) {
+    try {
       useAutoUpdate();
+    } catch (error) {
+      console.log('[NotificationInitializer] Erro ao inicializar autoUpdate:', error);
     }
   }, []);
 
@@ -74,33 +70,21 @@ export function NotificationInitializer() {
       }
     });
 
-    // Inicializar notificações - com tratamento especial para Expo Go
+    // Inicializar notificações
     const setupNotificationSystem = async () => {
       try {
         setInitStatus('loading');
         console.log('[NotificationInitializer] Iniciando setup de notificações...');
         
-        if (isExpoGo) {
-          console.log('[NotificationInitializer] Executando no Expo Go - funcionalidade de notificações limitada');
-          
-          // No Expo Go, apenas configuramos o handler básico, sem agendamento de notificações
-          const { status } = await Notifications.requestPermissionsAsync();
-          if (status !== 'granted') {
-            console.warn('[NotificationInitializer] Permissões de notificação não concedidas no Expo Go');
-          }
-          
+        // Inicializar com o novo serviço
+        const success = await initializeNotifications();
+        
+        if (success) {
+          console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
           setInitStatus('success');
         } else {
-          // Inicializar com o novo serviço completo em um build de desenvolvimento
-          const success = await initializeNotifications();
-          
-          if (success) {
-            console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
-            setInitStatus('success');
-          } else {
-            console.warn('[NotificationInitializer] Falha ao inicializar notificações');
-            setInitStatus('error');
-          }
+          console.warn('[NotificationInitializer] Falha ao inicializar notificações');
+          setInitStatus('error');
         }
       } catch (error) {
         console.error('[NotificationInitializer] Erro ao configurar notificações:', error);
@@ -108,7 +92,11 @@ export function NotificationInitializer() {
       } finally {
         setIsInitializing(false);
         // Esconder a splash screen depois da inicialização
-        SplashScreen.hideAsync();
+        try {
+          SplashScreen.hideAsync();
+        } catch (error) {
+          console.log('[NotificationInitializer] Erro ao esconder splash screen:', error);
+        }
       }
     };
 
@@ -121,20 +109,15 @@ export function NotificationInitializer() {
     };
   }, []);
 
-  // Atualizar notificações quando as configurações mudarem (apenas em builds reais)
+  // Atualizar notificações quando as configurações mudarem
   useEffect(() => {
-    if (!isExpoGo && !isInitializing && settings.enabled) {
+    if (!isInitializing && settings.enabled) {
       console.log('[NotificationInitializer] Configurações de notificação alteradas, atualizando...');
       refreshAllNotifications().catch(error => {
         console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
       });
     }
   }, [settings, isInitializing]);
-
-  // Se estiver no Expo Go, mostrar um aviso
-  if (isExpoGo) {
-    console.log('[NotificationInitializer] Avisos de funcionalidade limitada em Expo Go já foram mostrados');
-  }
 
   // Não renderizamos nada visível
   return null;

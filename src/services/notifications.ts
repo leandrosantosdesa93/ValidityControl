@@ -5,10 +5,6 @@ import { useProductStore } from '../store/productStore';
 import { differenceInDays } from 'date-fns';
 import { Product } from '../types/Product';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
-
-// Verificar se estamos executando no Expo Go
-const isExpoGo = Constants.appOwnership === 'expo';
 
 // Chave para controle de inicialização
 const NOTIFICATIONS_INITIALIZED_KEY = '@ValidityControl:notificationsInitialized';
@@ -30,12 +26,6 @@ Notifications.setNotificationHandler({
 export async function requestNotificationPermissions(): Promise<boolean> {
   try {
     console.log('[NotificationService] Solicitando permissões de notificação...');
-    
-    // Se estiver no Expo Go, simplificar o processo de permissões
-    if (isExpoGo) {
-      const { status } = await Notifications.getPermissionsAsync();
-      return status === 'granted';
-    }
     
     // Para Android 13 (API level 33) ou superior, POST_NOTIFICATIONS é obrigatório
     if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -95,8 +85,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
  * Configura os canais de notificação para Android
  */
 export async function setupNotificationChannels(): Promise<void> {
-  // Se estiver no Expo Go, pular configuração detalhada de canais
-  if (isExpoGo || Platform.OS !== 'android') return;
+  if (Platform.OS !== 'android') return;
   
   try {
     console.log('[NotificationService] Configurando canais para Android...');
@@ -169,13 +158,6 @@ export async function setupNotificationChannels(): Promise<void> {
 export async function initializeNotifications(): Promise<boolean> {
   try {
     console.log('[NotificationService] Iniciando setup de notificações...');
-    
-    // Se estiver no Expo Go, apenas verificar permissões básicas
-    if (isExpoGo) {
-      console.log('[NotificationService] Executando no Expo Go - funcionalidade limitada');
-      const hasPermission = await requestNotificationPermissions();
-      return hasPermission;
-    }
     
     // Verificar se já foi inicializado recentemente
     const lastInitialized = await AsyncStorage.getItem(NOTIFICATIONS_INITIALIZED_KEY);
@@ -428,14 +410,6 @@ export async function showTestNotification(): Promise<void> {
     if (!hasPermission) {
       Alert.alert('Erro', 'Não foi possível exibir a notificação de teste. Verifique as permissões.');
       return;
-    }
-    
-    if (isExpoGo) {
-      Alert.alert(
-        'Limitação do Expo Go',
-        'Notificações têm funcionalidade limitada no Expo Go. Para experiência completa, use um development build.',
-        [{ text: 'Entendi' }]
-      );
     }
     
     await Notifications.scheduleNotificationAsync({
