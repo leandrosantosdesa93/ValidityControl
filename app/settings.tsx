@@ -6,6 +6,7 @@ import { useColorScheme } from '@hooks/useColorScheme';
 import { useProductStore } from '../src/store/productStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { showTestNotification } from '../src/services/notifications';
 
 function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -175,12 +176,45 @@ function SettingsScreen() {
           <ThemedText style={styles.sectionTitle}>Notificações</ThemedText>
           
           <View style={styles.settingItem}>
-            <ThemedText>Ativar Notificações</ThemedText>
+            <ThemedText style={styles.settingText}>Ativar notificações</ThemedText>
             <Switch
               value={settings.enabled}
-              onValueChange={(value) => handleSettingChange('enabled', value)}
+              onValueChange={value => store.setNotificationsEnabled(value)}
+              trackColor={{ false: '#767577', true: isDark ? '#0078B9' : '#3498db' }}
+              thumbColor={settings.enabled ? '#fff' : '#f4f3f4'}
             />
           </View>
+
+          {/* Novo botão para testar notificações */}
+          <Pressable
+            style={[
+              styles.testNotificationButton,
+              !settings.enabled && styles.disabledButton
+            ]}
+            onPress={() => {
+              if (settings.enabled) {
+                showTestNotification();
+              } else {
+                Alert.alert(
+                  'Notificações desativadas',
+                  'Você precisa ativar as notificações para testá-las.',
+                  [{ text: 'OK' }]
+                );
+              }
+            }}
+          >
+            <Ionicons 
+              name="notifications" 
+              size={20} 
+              color={settings.enabled ? "white" : "#999"}
+            />
+            <ThemedText style={[
+              styles.testNotificationText,
+              !settings.enabled && styles.disabledText
+            ]}>
+              Testar notificações
+            </ThemedText>
+          </Pressable>
 
           <View style={styles.settingItem}>
             <ThemedText>Sons de Notificação</ThemedText>
@@ -474,6 +508,26 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  testNotificationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00A1DF',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 15,
+  },
+  testNotificationText: {
+    color: '#fff',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#e0e0e0',
+  },
+  disabledText: {
+    color: '#999',
   },
 });
 

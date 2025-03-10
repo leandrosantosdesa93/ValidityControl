@@ -7,6 +7,7 @@ export const ProductSchema = z.object({
   quantity: z.number().int().positive(),
   photoUri: z.string().optional(),
   isFavorite: z.boolean().default(false),
+  isSold: z.boolean().default(false),
   createdAt: z.date(),
   updatedAt: z.date().optional()
 });

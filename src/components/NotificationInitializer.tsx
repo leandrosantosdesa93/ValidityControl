@@ -1,243 +1,116 @@
-import React, { useEffect } from 'react';
-import { Platform, Alert } from 'react-native';
-import { setupNotifications, scheduleProductNotifications, scheduleGroupNotifications } from '../services/notifications';
-import { useProductStore } from '../store/productStore';
-import { useAutoUpdate } from '../hooks/useAutoUpdate';
+import React, { useEffect, useState } from 'react';
+import { Platform, Alert, View, Text, ActivityIndicator } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
-import { getProducts } from '@/services/ProductService';
+import { Linking } from 'react-native';
+import { useProductStore } from '../store/productStore';
+import {
+  initializeNotifications,
+  refreshAllNotifications,
+  cancelProductNotifications
+} from '../services/notifications';
+import { useAutoUpdate } from '../hooks/useAutoUpdate';
+import * as SplashScreen from 'expo-splash-screen';
+import { useColorScheme } from '@hooks/useColorScheme';
+
+// Garantir que o SplashScreen fique visível até terminarmos a inicialização
+SplashScreen.preventAutoHideAsync();
+
+// Configurar o handler global de notificações
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.MAX
+  }),
+});
 
 export function NotificationInitializer() {
-  // Inicializar o sistema de atualização automática
-  useAutoUpdate();
-  
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [initStatus, setInitStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
   // Acesso ao store
   const store = useProductStore();
-  const notificationSettings = store.notificationSettings;
+  const settings = store.notificationSettings;
 
-  // Função para solicitar permissões de notificação
-  const requestNotificationPermissions = async () => {
-    if (Platform.OS === 'android') {
-      // Android 13 (API 33) ou superior requer permissão específica para notificações
-      if (parseInt(Platform.Version as string, 10) >= 33) {
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        
-        console.log('[NotificationInitializer] Status atual de permissões Android 13+:', existingStatus);
-        
-        if (existingStatus !== 'granted') {
-          console.log('[NotificationInitializer] Solicitando permissões Android 13+...');
-          const { status } = await Notifications.requestPermissionsAsync();
-          
-          if (status !== 'granted') {
-            // Mostrar alerta explicando a importância das notificações
-            Alert.alert(
-              'Permissão Necessária',
-              'Para receber alertas sobre produtos prestes a vencer, é necessário permitir notificações. Você pode habilitar isto nas configurações do aplicativo.',
-              [
-                { text: 'Mais tarde', style: 'cancel' },
-                { 
-                  text: 'Configurações', 
-                  onPress: () => Notifications.presentPermissionRequestScreen()
-                }
-              ]
-            );
-            return false;
-          }
-        }
-      }
-    }
-    
-    // Para iOS ou Android < 13
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    console.log('[NotificationInitializer] Status atual de permissões:', existingStatus);
-    
-    if (existingStatus !== 'granted') {
-      console.log('[NotificationInitializer] Solicitando permissões...');
-      const { status } = await Notifications.requestPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permissão Necessária',
-          'Para receber alertas sobre produtos prestes a vencer, é necessário permitir notificações.'
-        );
-        return false;
-      }
-    }
-    
-    return true;
-  };
+  // Inicializar o sistema de atualização automática
+  useAutoUpdate();
 
-  // Função para verificar se um produto já foi marcado como vendido
-  const checkIfProductIsSold = async (productId: string) => {
-    try {
-      const products = await getProducts();
-      const product = products.find(p => p.code === productId);
-      
-      // Se o produto não for encontrado ou estiver marcado como vendido
-      if (!product || product.isSold === true) {
-        console.log(`[NotificationInitializer] Produto ${productId} já foi vendido ou não existe`);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('[NotificationInitializer] Erro ao verificar status do produto:', error);
-      return false;
-    }
-  };
-
+  // Configurar listener para notificações recebidas
   useEffect(() => {
-    // Garantir que as notificações estejam habilitadas por padrão
-    if (!notificationSettings.enabled) {
-      console.log('[NotificationInitializer] Habilitando notificações por padrão');
-      store.setNotificationsEnabled(true);
-    }
+    console.log('[NotificationInitializer] Configurando listeners de notificações...');
     
-    // Configurar comportamento de notificações
-    if (Platform.OS === 'android') {
-      console.log('[NotificationInitializer] Configurando canais de notificação para Android');
+    // Listener para notificações recebidas com o app em primeiro plano
+    const foregroundSubscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('[NotificationInitializer] Notificação recebida em primeiro plano:', notification);
+    });
+
+    // Listener para notificações clicadas
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('[NotificationInitializer] Usuário interagiu com notificação:', response);
       
-      Notifications.setNotificationChannelAsync('default', {
-        name: 'Geral',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#00A1DF',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
+      // Aqui você pode adicionar navegação para a tela relevante
+      const data = response.notification.request.content.data;
+      console.log('[NotificationInitializer] Dados da notificação:', data);
       
-      Notifications.setNotificationChannelAsync('urgent', {
-        name: 'Urgente',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 500, 250, 500],
-        lightColor: '#FF0000',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
-      
-      Notifications.setNotificationChannelAsync('warning', {
-        name: 'Aviso',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FFA500',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
-      
-      Notifications.setNotificationChannelAsync('info', {
-        name: 'Informação',
-        importance: Notifications.AndroidImportance.DEFAULT,
-        vibrationPattern: [0, 250],
-        lightColor: '#FFD700',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
-    }
-    
-    // Configurar handler de notificações
-    Notifications.setNotificationHandler({
-      handleNotification: async (notification) => {
-        console.log('[NotificationInitializer] Processando notificação recebida:', notification);
-        
-        // Verificar se é uma notificação de produto vencendo hoje
-        const data = notification.request.content.data as any;
-        if (data?.isExpiryDayAlert && data?.productId) {
-          // Verificar se o produto já foi marcado como vendido
-          const isSold = await checkIfProductIsSold(data.productId);
-          
-          // Se o produto já foi marcado como vendido, não mostrar a notificação
-          if (isSold) {
-            console.log(`[NotificationInitializer] Produto ${data.productId} já foi vendido, cancelando notificação`);
-            return {
-              shouldShowAlert: false,
-              shouldPlaySound: false,
-              shouldSetBadge: false,
-            };
-          }
+      // Verificar se o produto já foi vendido
+      const productId = data.productId as string;
+      if (productId) {
+        const product = store.products.find(p => p.code === productId);
+        if (product?.isSold) {
+          console.log('[NotificationInitializer] Produto já foi vendido, cancelando notificações:', productId);
+          cancelProductNotifications(productId);
         }
-        
-        return {
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-        };
-      },
+      }
     });
 
     // Inicializar notificações
-    const initNotifications = async () => {
+    const setupNotificationSystem = async () => {
       try {
-        console.log('[NotificationInitializer] Iniciando configuração de notificações');
+        setInitStatus('loading');
+        console.log('[NotificationInitializer] Iniciando setup de notificações...');
         
-        // Solicitar permissões
-        const permissionGranted = await requestNotificationPermissions();
-        if (!permissionGranted) {
-          console.log('[NotificationInitializer] Permissões de notificação não concedidas');
-          return;
-        }
+        // Inicializar com o novo serviço
+        const success = await initializeNotifications();
         
-        // Configurar e agendar notificações
-        const success = await setupNotifications();
-        console.log('[NotificationInitializer] Notificações inicializadas:', success);
-        
-        // Verificar notificações agendadas
-        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-        console.log(`[NotificationInitializer] Notificações agendadas: ${scheduled.length}`);
-        
-        if (scheduled.length === 0 && store.products.length > 0 && notificationSettings.enabled) {
-          console.log('[NotificationInitializer] Nenhuma notificação agendada. Reagendando...');
-          
-          // Reagendar notificações para todos os produtos
-          for (const product of store.products) {
-            // Ignorar produtos marcados como vendidos
-            if (product.isSold) {
-              console.log(`[NotificationInitializer] Ignorando produto já vendido: ${product.code}`);
-              continue;
-            }
-            
-            console.log(`[NotificationInitializer] Reagendando notificações para: ${product.code}`);
-            await scheduleProductNotifications(product.code);
-          }
-          
-          // Reagendar notificações de grupo
-          if (notificationSettings.groupNotifications) {
-            await scheduleGroupNotifications();
-          }
-          
-          // Verificar novamente
-          const updatedScheduled = await Notifications.getAllScheduledNotificationsAsync();
-          console.log(`[NotificationInitializer] Notificações reagendadas: ${updatedScheduled.length}`);
+        if (success) {
+          console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
+          setInitStatus('success');
+        } else {
+          console.warn('[NotificationInitializer] Falha ao inicializar notificações');
+          setInitStatus('error');
         }
       } catch (error) {
-        console.error('[NotificationInitializer] Erro na inicialização:', error);
+        console.error('[NotificationInitializer] Erro ao configurar notificações:', error);
+        setInitStatus('error');
+      } finally {
+        setIsInitializing(false);
+        // Esconder a splash screen depois da inicialização
+        SplashScreen.hideAsync();
       }
     };
 
-    initNotifications();
+    setupNotificationSystem();
 
-    // Configurar listener para notificações recebidas
-    const receivedSubscription = Notifications.addNotificationReceivedListener(notification => {
-      console.log('[NotificationInitializer] Notificação recebida:', notification);
-    });
-    
-    // Configurar listener para notificações respondidas
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('[NotificationInitializer] Usuário respondeu à notificação:', response);
-      
-      // Aqui você pode adicionar lógica para navegar para uma tela específica com base na notificação
-      // Exemplo: Se a notificação é sobre um produto específico, abrir a tela de detalhes desse produto
-    });
-
-    // Limpar quando o componente for desmontado
+    // Limpar listeners ao desmontar
     return () => {
-      receivedSubscription.remove();
+      foregroundSubscription.remove();
       responseSubscription.remove();
     };
   }, []);
 
-  return null; // Este componente não renderiza nada visualmente
+  // Atualizar notificações quando as configurações mudarem
+  useEffect(() => {
+    if (!isInitializing && settings.enabled) {
+      console.log('[NotificationInitializer] Configurações de notificação alteradas, atualizando...');
+      refreshAllNotifications().catch(error => {
+        console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
+      });
+    }
+  }, [settings, isInitializing]);
+
+  // Não renderizamos nada visível
+  return null;
 } 
