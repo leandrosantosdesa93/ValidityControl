@@ -2,17 +2,13 @@ import * as Notifications from 'expo-notifications';
 import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { Platform, Alert, Linking } from 'react-native';
 import { useProductStore } from '../store/productStore';
-import { differenceInDays, format, isWithinInterval, set } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { differenceInDays } from 'date-fns';
 import { Product } from '../types/Product';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// Configurar sons diferentes para cada nível de urgência
-const NOTIFICATION_SOUNDS = {
-  urgent: null, // Usar o som padrão do sistema
-  warning: null, // Usar o som padrão do sistema
-  info: null, // Usar o som padrão do sistema
-};
+// Verificar se estamos executando no Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // Chave para controle de inicialização
 const NOTIFICATIONS_INITIALIZED_KEY = '@ValidityControl:notificationsInitialized';
@@ -34,6 +30,12 @@ Notifications.setNotificationHandler({
 export async function requestNotificationPermissions(): Promise<boolean> {
   try {
     console.log('[NotificationService] Solicitando permissões de notificação...');
+    
+    // Se estiver no Expo Go, simplificar o processo de permissões
+    if (isExpoGo) {
+      const { status } = await Notifications.getPermissionsAsync();
+      return status === 'granted';
+    }
     
     // Para Android 13 (API level 33) ou superior, POST_NOTIFICATIONS é obrigatório
     if (Platform.OS === 'android' && Platform.Version >= 33) {
@@ -93,7 +95,8 @@ export async function requestNotificationPermissions(): Promise<boolean> {
  * Configura os canais de notificação para Android
  */
 export async function setupNotificationChannels(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+  // Se estiver no Expo Go, pular configuração detalhada de canais
+  if (isExpoGo || Platform.OS !== 'android') return;
   
   try {
     console.log('[NotificationService] Configurando canais para Android...');
@@ -104,7 +107,7 @@ export async function setupNotificationChannels(): Promise<void> {
       await Notifications.deleteNotificationChannelAsync('expiring_products');
       await Notifications.deleteNotificationChannelAsync('expired_products');
       await Notifications.deleteNotificationChannelAsync('urgent');
-    } catch (e) {
+    } catch {
       // Ignorar erros ao excluir canais não existentes
     }
     
@@ -166,6 +169,13 @@ export async function setupNotificationChannels(): Promise<void> {
 export async function initializeNotifications(): Promise<boolean> {
   try {
     console.log('[NotificationService] Iniciando setup de notificações...');
+    
+    // Se estiver no Expo Go, apenas verificar permissões básicas
+    if (isExpoGo) {
+      console.log('[NotificationService] Executando no Expo Go - funcionalidade limitada');
+      const hasPermission = await requestNotificationPermissions();
+      return hasPermission;
+    }
     
     // Verificar se já foi inicializado recentemente
     const lastInitialized = await AsyncStorage.getItem(NOTIFICATIONS_INITIALIZED_KEY);
@@ -248,8 +258,8 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
   try {
     if (product.isSold) {
       console.log(`[NotificationService] Produto ${product.code} marcado como vendido, ignorando.`);
-      return;
-    }
+    return;
+  }
     
     const store = useProductStore.getState();
     const settings = store.notificationSettings || {
@@ -263,8 +273,8 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
     const daysToExpiry = differenceInDays(expirationDate, today);
     
     console.log(`[NotificationService] Produto ${product.code}: ${daysToExpiry} dias até vencer.`);
-    
-    // Cancelar notificações existentes para este produto
+
+  // Cancelar notificações existentes para este produto
     await cancelProductNotifications(product.code);
     
     // Para produtos que vencem hoje (dia 0), agendar 4 notificações com intervalos de 3 horas
@@ -274,7 +284,7 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
     }
     
     // Para produtos que vencem em breve, agendar notificações nos dias configurados
-    for (const days of settings.notificationDays) {
+  for (const days of settings.notificationDays) {
       if (daysToExpiry > days) {
         const notificationDate = new Date();
         notificationDate.setDate(today.getDate() + (daysToExpiry - days));
@@ -420,6 +430,14 @@ export async function showTestNotification(): Promise<void> {
       return;
     }
     
+    if (isExpoGo) {
+      Alert.alert(
+        'Limitação do Expo Go',
+        'Notificações têm funcionalidade limitada no Expo Go. Para experiência completa, use um development build.',
+        [{ text: 'Entendi' }]
+      );
+    }
+    
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Teste de Notificação',
@@ -451,13 +469,7 @@ function isWithinQuietHours(date: Date, start: number, end: number): boolean {
 }
 
 function getNotificationChannel(daysToExpiry: number): string {
-  if (daysToExpiry <= 1) return 'urgent';
-  if (daysToExpiry <= 3) return 'warning';
-  return 'info';
-}
-
-function getNotificationSound(daysToExpiry: number) {
-  return undefined; // Não usar sons personalizados
+  return daysToExpiry <= 1 ? 'urgent' : 'expiring_products';
 }
 
 export async function scheduleGroupNotifications() {
@@ -527,14 +539,14 @@ export async function scheduleGroupNotifications() {
 
       const channel = getNotificationChannel(daysNum);
       const productsArray = products as Product[];
-      
+
       console.log(`[NotificationService] Agendando notificação de grupo para ${productsArray.length} produtos que vencem em ${days} dias`);
 
       try {
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: `${productsArray.length} produtos próximos ao vencimento`,
-            body: `Você tem ${productsArray.length} produtos que vencem em ${days} dias`,
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${productsArray.length} produtos próximos ao vencimento`,
+          body: `Você tem ${productsArray.length} produtos que vencem em ${days} dias`,
             sound: settings.soundEnabled,
             data: { isGroup: true, days: daysNum },
             color: daysNum <= 1 ? '#FF0000' : '#FFA500',

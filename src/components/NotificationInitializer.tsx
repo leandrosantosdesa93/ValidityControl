@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Alert, View, Text, ActivityIndicator } from 'react-native';
+import { Platform, Alert, View, Text } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Linking } from 'react-native';
 import { useProductStore } from '../store/productStore';
@@ -11,9 +11,13 @@ import {
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from '@hooks/useColorScheme';
+import Constants from 'expo-constants';
 
 // Garantir que o SplashScreen fique visível até terminarmos a inicialização
 SplashScreen.preventAutoHideAsync();
+
+// Verificar se estamos executando no Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
 
 // Configurar o handler global de notificações
 Notifications.setNotificationHandler({
@@ -35,8 +39,12 @@ export function NotificationInitializer() {
   const store = useProductStore();
   const settings = store.notificationSettings;
 
-  // Inicializar o sistema de atualização automática
-  useAutoUpdate();
+  // Inicializar o sistema de atualização automática (se não estiver no Expo Go)
+  useEffect(() => {
+    if (!isExpoGo) {
+      useAutoUpdate();
+    }
+  }, []);
 
   // Configurar listener para notificações recebidas
   useEffect(() => {
@@ -66,21 +74,33 @@ export function NotificationInitializer() {
       }
     });
 
-    // Inicializar notificações
+    // Inicializar notificações - com tratamento especial para Expo Go
     const setupNotificationSystem = async () => {
       try {
         setInitStatus('loading');
         console.log('[NotificationInitializer] Iniciando setup de notificações...');
         
-        // Inicializar com o novo serviço
-        const success = await initializeNotifications();
-        
-        if (success) {
-          console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
+        if (isExpoGo) {
+          console.log('[NotificationInitializer] Executando no Expo Go - funcionalidade de notificações limitada');
+          
+          // No Expo Go, apenas configuramos o handler básico, sem agendamento de notificações
+          const { status } = await Notifications.requestPermissionsAsync();
+          if (status !== 'granted') {
+            console.warn('[NotificationInitializer] Permissões de notificação não concedidas no Expo Go');
+          }
+          
           setInitStatus('success');
         } else {
-          console.warn('[NotificationInitializer] Falha ao inicializar notificações');
-          setInitStatus('error');
+          // Inicializar com o novo serviço completo em um build de desenvolvimento
+          const success = await initializeNotifications();
+          
+          if (success) {
+            console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
+            setInitStatus('success');
+          } else {
+            console.warn('[NotificationInitializer] Falha ao inicializar notificações');
+            setInitStatus('error');
+          }
         }
       } catch (error) {
         console.error('[NotificationInitializer] Erro ao configurar notificações:', error);
@@ -101,15 +121,20 @@ export function NotificationInitializer() {
     };
   }, []);
 
-  // Atualizar notificações quando as configurações mudarem
+  // Atualizar notificações quando as configurações mudarem (apenas em builds reais)
   useEffect(() => {
-    if (!isInitializing && settings.enabled) {
+    if (!isExpoGo && !isInitializing && settings.enabled) {
       console.log('[NotificationInitializer] Configurações de notificação alteradas, atualizando...');
       refreshAllNotifications().catch(error => {
         console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
       });
     }
   }, [settings, isInitializing]);
+
+  // Se estiver no Expo Go, mostrar um aviso
+  if (isExpoGo) {
+    console.log('[NotificationInitializer] Avisos de funcionalidade limitada em Expo Go já foram mostrados');
+  }
 
   // Não renderizamos nada visível
   return null;
