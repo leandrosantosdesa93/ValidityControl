@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { NotificationTriggerInput, SchedulableTriggerInputTypes } from 'expo-notifications';
+import { SchedulableTriggerInputTypes } from 'expo-notifications';
 import { Platform, Alert, Linking } from 'react-native';
 import { useProductStore } from '../store/productStore';
 import { differenceInDays, format, isWithinInterval, set } from 'date-fns';
