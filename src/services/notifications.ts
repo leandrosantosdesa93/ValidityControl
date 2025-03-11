@@ -62,10 +62,10 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       }
     } else {
       // iOS e Android < 13
-      const { status } = await Notifications.requestPermissionsAsync();
+  const { status } = await Notifications.requestPermissionsAsync();
       console.log('[NotificationService] Status de permissões em iOS/Android antigo:', status);
       
-      if (status !== 'granted') {
+  if (status !== 'granted') {
         Alert.alert(
           'Permissão de Notificações',
           'Para receber alertas sobre produtos a vencer, você precisa permitir notificações.'
@@ -165,9 +165,9 @@ export async function initializeNotifications(): Promise<boolean> {
     
     if (lastInitialized && (now - parseInt(lastInitialized)) < 3600000) { // 1 hora
       console.log('[NotificationService] Inicializado recentemente, pulando.');
-      return true;
-    }
-    
+  return true;
+}
+
     // 1. Solicitar permissões
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
@@ -411,7 +411,7 @@ export async function showTestNotification(): Promise<void> {
       Alert.alert('Erro', 'Não foi possível exibir a notificação de teste. Verifique as permissões.');
       return;
     }
-    
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: 'Teste de Notificação',
