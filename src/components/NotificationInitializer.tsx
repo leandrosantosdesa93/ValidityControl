@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { Linking } from 'react-native';
 import { useProductStore } from '../store/productStore';
 import {
   initializeNotifications,
   refreshAllNotifications,
-  cancelProductNotifications
+  cancelProductNotifications,
+  showTestNotification
 } from '../services/notifications';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
-import Constants from 'expo-constants';
-
-// Verificar se estamos executando no Expo Go
-const isExpoGo = Constants.appOwnership === 'expo';
 
 // Configurar o handler global de notificações
 Notifications.setNotificationHandler({
@@ -36,9 +32,12 @@ export function NotificationInitializer() {
   // Inicializar o sistema de atualização automática
   useEffect(() => {
     try {
-      useAutoUpdate();
+      // Inicializar o sistema de atualização automaticamente
+      useAutoUpdate().catch(error => {
+        console.warn('[NotificationInitializer] Erro no autoUpdate:', error);
+      });
     } catch (error) {
-      console.log('[NotificationInitializer] Erro ao inicializar autoUpdate:', error);
+      console.warn('[NotificationInitializer] Erro ao inicializar autoUpdate:', error);
     }
   }, []);
 
@@ -76,7 +75,7 @@ export function NotificationInitializer() {
         setInitStatus('loading');
         console.log('[NotificationInitializer] Iniciando setup de notificações...');
         
-        // Inicializar com o novo serviço
+        // Inicializar o sistema de notificações
         const success = await initializeNotifications();
         
         if (success) {
@@ -91,11 +90,12 @@ export function NotificationInitializer() {
         setInitStatus('error');
       } finally {
         setIsInitializing(false);
+        
         // Esconder a splash screen depois da inicialização
         try {
-          SplashScreen.hideAsync();
+          await SplashScreen.hideAsync();
         } catch (error) {
-          console.log('[NotificationInitializer] Erro ao esconder splash screen:', error);
+          console.warn('[NotificationInitializer] Erro ao esconder splash screen:', error);
         }
       }
     };
@@ -111,11 +111,16 @@ export function NotificationInitializer() {
 
   // Atualizar notificações quando as configurações mudarem
   useEffect(() => {
+    // Só atualizar se já inicializamos e as notificações estão habilitadas
     if (!isInitializing && settings.enabled) {
       console.log('[NotificationInitializer] Configurações de notificação alteradas, atualizando...');
-      refreshAllNotifications().catch(error => {
-        console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
-      });
+      refreshAllNotifications()
+        .then(success => {
+          console.log('[NotificationInitializer] Notificações atualizadas com sucesso:', success);
+        })
+        .catch(error => {
+          console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
+        });
     }
   }, [settings, isInitializing]);
 
