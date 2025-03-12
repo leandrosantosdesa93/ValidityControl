@@ -85,10 +85,10 @@ export async function requestNotificationPermissions(): Promise<boolean> {
       return true;
     } else {
       // iOS
-      const { status } = await Notifications.requestPermissionsAsync();
+  const { status } = await Notifications.requestPermissionsAsync();
       console.log('[NotificationService] Status de permissões em iOS:', status);
       
-      if (status !== 'granted') {
+  if (status !== 'granted') {
         Alert.alert(
           'Permissão de Notificações',
           'Para receber alertas sobre produtos a vencer, você precisa permitir notificações.'
@@ -595,8 +595,8 @@ export async function refreshAllNotifications(): Promise<boolean> {
     // Verificar notificações depois de agendar
     const newScheduled = await Notifications.getAllScheduledNotificationsAsync();
     console.log(`[NotificationService] Notificações reagendadas com sucesso: ${newScheduled.length}`);
-    
-    return true;
+
+  return true;
   } catch (error) {
     console.error('[NotificationService] Erro ao atualizar notificações:', error);
     return false;
