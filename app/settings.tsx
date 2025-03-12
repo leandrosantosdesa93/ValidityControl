@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Switch, Pressable, TextInput, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Switch, TextInput, Alert, Pressable } from 'react-native';
 import { ThemedView } from '@components/ThemedView';
 import { ThemedText } from '@components/ThemedText';
 import { useColorScheme } from '@hooks/useColorScheme';
 import { useProductStore } from '../src/store/productStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { showTestNotification } from '../src/services/notifications';
 
 function SettingsScreen() {
   const colorScheme = useColorScheme();
@@ -184,37 +183,6 @@ function SettingsScreen() {
               thumbColor={settings.enabled ? '#fff' : '#f4f3f4'}
             />
           </View>
-
-          {/* Novo botão para testar notificações */}
-          <Pressable
-            style={[
-              styles.testNotificationButton,
-              !settings.enabled && styles.disabledButton
-            ]}
-            onPress={() => {
-              if (settings.enabled) {
-                showTestNotification();
-              } else {
-                Alert.alert(
-                  'Notificações desativadas',
-                  'Você precisa ativar as notificações para testá-las.',
-                  [{ text: 'OK' }]
-                );
-              }
-            }}
-          >
-            <Ionicons 
-              name="notifications" 
-              size={20} 
-              color={settings.enabled ? "white" : "#999"}
-            />
-            <ThemedText style={[
-              styles.testNotificationText,
-              !settings.enabled && styles.disabledText
-            ]}>
-              Testar notificações
-            </ThemedText>
-          </Pressable>
 
           <View style={styles.settingItem}>
             <ThemedText>Sons de Notificação</ThemedText>
@@ -508,26 +476,6 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  testNotificationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#00A1DF',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 15,
-  },
-  testNotificationText: {
-    color: '#fff',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  disabledButton: {
-    backgroundColor: '#e0e0e0',
-  },
-  disabledText: {
-    color: '#999',
   },
 });
 

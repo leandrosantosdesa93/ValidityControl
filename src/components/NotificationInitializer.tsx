@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useProductStore } from '../store/productStore';
 import {
   initializeNotifications,
   refreshAllNotifications,
   cancelProductNotifications,
-  showTestNotification
+  scheduleAllProductNotifications
 } from '../services/notifications';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
@@ -24,10 +24,12 @@ Notifications.setNotificationHandler({
 export function NotificationInitializer() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initStatus, setInitStatus] = useState<'loading' | 'success' | 'error'>('loading');
-
+  const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
+  
   // Acesso ao store
   const store = useProductStore();
   const settings = store.notificationSettings;
+  const products = store.products;
 
   // Inicializar o sistema de atualização automática
   useEffect(() => {
@@ -40,6 +42,32 @@ export function NotificationInitializer() {
       console.warn('[NotificationInitializer] Erro ao inicializar autoUpdate:', error);
     }
   }, []);
+
+  // Monitorar mudanças no estado do aplicativo
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      console.log('[NotificationInitializer] Estado do aplicativo mudou para:', nextAppState);
+      
+      // Se o app está retornando para o primeiro plano
+      if (appState.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('[NotificationInitializer] Aplicativo voltou para o primeiro plano');
+        
+        // Fazer uma reverificação das notificações
+        if (settings.enabled && !isInitializing) {
+          console.log('[NotificationInitializer] Reagendando notificações após retorno ao primeiro plano');
+          scheduleAllProductNotifications().catch(error => {
+            console.error('[NotificationInitializer] Erro ao reagendar notificações:', error);
+          });
+        }
+      }
+      
+      setAppState(nextAppState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [appState, settings.enabled, isInitializing]);
 
   // Configurar listener para notificações recebidas
   useEffect(() => {
@@ -75,11 +103,30 @@ export function NotificationInitializer() {
         setInitStatus('loading');
         console.log('[NotificationInitializer] Iniciando setup de notificações...');
         
+        // Solicitar permissões e verificar estado atual
+        const { status } = await Notifications.getPermissionsAsync();
+        console.log('[NotificationInitializer] Status atual de permissões:', status);
+        
+        // Verificar notificações agendadas atualmente
+        const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+        console.log('[NotificationInitializer] Notificações agendadas atualmente:', scheduled.length);
+        
         // Inicializar o sistema de notificações
         const success = await initializeNotifications();
         
         if (success) {
           console.log('[NotificationInitializer] Notificações inicializadas com sucesso');
+          
+          // Para Android, verificar se é necessário reagendar
+          if (Platform.OS === 'android' && settings.enabled && products.length > 0) {
+            console.log('[NotificationInitializer] Reagendando notificações para Android...');
+            
+            // Certificar que todas as notificações são reagendadas
+            scheduleAllProductNotifications().catch(error => {
+              console.error('[NotificationInitializer] Erro ao agendar notificações:', error);
+            });
+          }
+          
           setInitStatus('success');
         } else {
           console.warn('[NotificationInitializer] Falha ao inicializar notificações');
@@ -117,12 +164,27 @@ export function NotificationInitializer() {
       refreshAllNotifications()
         .then(success => {
           console.log('[NotificationInitializer] Notificações atualizadas com sucesso:', success);
+          
+          // Para Android, reagendar explicitamente 
+          if (Platform.OS === 'android') {
+            return scheduleAllProductNotifications();
+          }
         })
         .catch(error => {
           console.error('[NotificationInitializer] Erro ao atualizar notificações:', error);
         });
     }
   }, [settings, isInitializing]);
+
+  // Reagendar notificações quando a lista de produtos mudar
+  useEffect(() => {
+    if (!isInitializing && settings.enabled && products.length > 0) {
+      console.log('[NotificationInitializer] Lista de produtos alterada, reagendando notificações...');
+      scheduleAllProductNotifications().catch(error => {
+        console.error('[NotificationInitializer] Erro ao reagendar notificações após produtos alterados:', error);
+      });
+    }
+  }, [products, settings.enabled, isInitializing]);
 
   // Não renderizamos nada visível
   return null;
