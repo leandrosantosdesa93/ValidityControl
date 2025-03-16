@@ -343,86 +343,6 @@ function SettingsScreen() {
             ))}
           </View>
         </View>
-
-        {/* Nova seção para diagnóstico e teste de notificações */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="bug" size={24} color={isDark ? '#fff' : '#000'} />
-            <ThemedText style={styles.sectionTitle}>Diagnóstico de Notificações</ThemedText>
-          </View>
-
-          <ThemedText style={styles.diagnosticInfo}>
-            Se você está enfrentando problemas com notificações, use os botões abaixo para diagnosticar e testar:
-          </ThemedText>
-
-          <View style={styles.buttonsContainer}>
-            <Pressable
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? '#2196F3' : '#1976D2' }
-              ]}
-              onPress={async () => {
-                try {
-                  const { sendTestNotification } = require('../src/services/notifications');
-                  const result = await sendTestNotification();
-                  Alert.alert('Notificação Enviada', `Notificação de teste enviada com ID: ${result}. Verifique se ela aparece em alguns segundos.`);
-                } catch (error) {
-                  Alert.alert('Erro', `Falha ao enviar notificação: ${error.message}`);
-                }
-              }}
-            >
-              <Ionicons name="paper-plane" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Enviar Notificação de Teste</ThemedText>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? '#4CAF50' : '#388E3C' }
-              ]}
-              onPress={async () => {
-                try {
-                  const { testMultipleNotificationMethods } = require('../src/services/notifications');
-                  const results = await testMultipleNotificationMethods();
-                  Alert.alert('Teste de Notificações', 
-                    `Foram enviados múltiplos tipos de notificação para diagnóstico:\n\n${results.join('\n\n')}\n\nVerifique se elas aparecem nos próximos segundos.`);
-                } catch (error) {
-                  Alert.alert('Erro', `Falha nos testes: ${error.message}`);
-                }
-              }}
-            >
-              <Ionicons name="medkit" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Diagnóstico Completo</ThemedText>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? '#FF9800' : '#F57C00' }
-              ]}
-              onPress={async () => {
-                try {
-                  const { checkNotificationPermissions, checkNotificationChannels } = require('../src/services/notifications');
-                  const permStatus = await checkNotificationPermissions();
-                  
-                  let message = `Status de permissão: ${permStatus.status}\n`;
-                  
-                  if (Platform.OS === 'android') {
-                    await checkNotificationChannels();
-                    message += "\nCanais de notificação verificados. Veja o console para detalhes.";
-                  }
-                  
-                  Alert.alert('Status das Notificações', message);
-                } catch (error) {
-                  Alert.alert('Erro', `Falha ao verificar status: ${error.message}`);
-                }
-              }}
-            >
-              <Ionicons name="list" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Verificar Permissões</ThemedText>
-            </Pressable>
-          </View>
-        </View>
       </ThemedView>
     </ScrollView>
   );
@@ -556,28 +476,6 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  diagnosticInfo: {
-    marginBottom: 16,
-    opacity: 0.8,
-    fontSize: 14,
-  },
-  
-  buttonsContainer: {
-    gap: 12,
-  },
-  
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    gap: 12,
-  },
-  
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
 });
 
