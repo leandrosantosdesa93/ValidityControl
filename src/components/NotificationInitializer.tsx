@@ -32,10 +32,12 @@ export function NotificationInitializer() {
   const products = store.products;
 
   // Inicializar o sistema de atualização automática
+  const autoUpdate = useAutoUpdate();
+  
   useEffect(() => {
     try {
-      // Inicializar o sistema de atualização automaticamente
-      useAutoUpdate().catch(error => {
+      // Executar a função retornada pelo hook (não o próprio hook)
+      autoUpdate.checkForUpdates().catch(error => {
         console.warn('[NotificationInitializer] Erro no autoUpdate:', error);
       });
     } catch (error) {
