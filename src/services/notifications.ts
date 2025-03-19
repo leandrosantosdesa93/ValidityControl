@@ -329,7 +329,7 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
     const expirationDate = new Date(product.expirationDate);
     expirationDate.setHours(0, 0, 0, 0); // Normalizar para início do dia
     
-    const daysRemaining = differenceInDays(expirationDate, today);
+    const daysRemaining = differenceInDays(today, expirationDate);
     console.log(`[NotificationService] Produto ${product.code}: faltam ${daysRemaining} dias para vencer.`);
     
     // Se já venceu, agendar uma notificação de "produto vencido"
@@ -361,58 +361,10 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
       return;
     }
     
-    // Se vence hoje
-    if (daysRemaining === 0) {
-      const content = {
-        title: 'URGENTE: Produto Vence HOJE!',
-        body: `${product.description} vence hoje!`,
-        data: { productId: product.code, screen: 'expiring' },
-        sound: true,
-      };
-      
-      // Agendar três notificações ao longo do dia
-      const hours = [9, 12, 18]; // Horários de notificação: 9h, 12h e 18h
-      
-      for (const hour of hours) {
-        const notifyDate = new Date();
-        notifyDate.setHours(hour, 0, 0, 0);
-        
-        // Se o horário já passou hoje, pular
-        if (notifyDate <= new Date()) continue;
-        
-        if (Platform.OS === 'android') {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              ...content,
-              channelId: 'urgent',
-            },
-            trigger: { 
-              hour,
-              minute: 0,
-              repeats: false,
-            },
-          });
-        } else {
-          await Notifications.scheduleNotificationAsync({
-            content,
-            trigger: { 
-              hour,
-              minute: 0,
-              repeats: false,
-            },
-          });
-        }
-        
-        console.log(`[NotificationService] Agendada notificação para hoje às ${hour}h - Produto: ${product.code}`);
-      }
-      
-      return;
-    }
-    
     // Verificar quais dias devem gerar notificação
     const notificationDays = settings.notificationDays
-      .filter(days => days <= daysRemaining)
-      .sort((a, b) => b - a); // Ordenar do maior para o menor
+      .filter(days => daysRemaining <= days)
+      .sort((a, b) => a - b); // Ordenar do menor para o maior
     
     if (notificationDays.length === 0) {
       console.log(`[NotificationService] Nenhum dia configurado para ${product.code} (faltam ${daysRemaining} dias)`);
@@ -423,14 +375,21 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
     
     for (const days of notificationDays) {
       // Calcular a data exata da notificação
-      const notificationDate = new Date(today);
-      notificationDate.setDate(today.getDate() + (daysRemaining - days));
-      notificationDate.setHours(9, 0, 0, 0); // Fixar às 9h da manhã
+      const notificationDate = new Date();
       
-      // Já passou do horário hoje? Se sim, pular
-      if (days === daysRemaining && notificationDate < new Date()) {
-        console.log(`[NotificationService] Horário já passou hoje para ${product.code}, pulando alerta de ${days} dias`);
-        continue;
+      // Definir horário base para 9h da manhã
+      notificationDate.setHours(9, 0, 0, 0);
+      
+      // Se estiver no período de silêncio, ajustar para o final do período
+      if (isQuietTime()) {
+        const { quietHoursEnd } = store.notificationSettings;
+        const [hours, minutes] = quietHoursEnd.toString().split('.').map(Number);
+        notificationDate.setHours(hours || 9, minutes || 0, 0, 0);
+      }
+      
+      // Se o horário já passou hoje, agendar para amanhã
+      if (notificationDate < new Date()) {
+        notificationDate.setDate(notificationDate.getDate() + 1);
       }
       
       console.log(`[NotificationService] Preparando alerta para ${days} dias antes (${notificationDate.toISOString()}) - Produto: ${product.code}`);
@@ -438,13 +397,13 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
       // Preparar conteúdo da notificação
       let title, body, channelId;
       
-      if (days <= 3) {
+      if (daysRemaining <= 3) {
         title = `URGENTE: ${product.description} vai vencer!`;
-        body = `Faltam apenas ${days} dia${days > 1 ? 's' : ''} para ${product.description} vencer!`;
+        body = `Faltam apenas ${daysRemaining} dia${daysRemaining > 1 ? 's' : ''} para ${product.description} vencer!`;
         channelId = 'urgent';
       } else {
         title = `${product.description} vai vencer em breve`;
-        body = `Faltam ${days} dias para o vencimento.`;
+        body = `Faltam ${daysRemaining} dias para o vencimento.`;
         channelId = 'expiring_products';
       }
       
@@ -468,28 +427,18 @@ export async function scheduleProductNotifications(product: Product): Promise<vo
             content: {
               title,
               body,
-              data: { productId: product.code, days, screen: 'expiring' },
+              data: { productId: product.code, screen: 'expiring' },
               sound: true,
               channelId,
+              priority: Notifications.AndroidNotificationPriority.MAX,
             },
-            trigger: { seconds: secondsUntilNotification },
-          });
-        } else {
-          // Para iOS, podemos usar a data completa
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title,
-              body,
-              data: { productId: product.code, days, screen: 'expiring' },
-              sound: true,
-            },
-            trigger: {
-              date: notificationDate,
+            trigger: { 
+              seconds: secondsUntilNotification,
             },
           });
+          
+          console.log(`[NotificationService] Agendado alerta de ${days} dias para ${product.code}`);
         }
-        
-        console.log(`[NotificationService] Agendado alerta de ${days} dias para ${product.code}`);
       } catch (error) {
         console.error(`[NotificationService] Erro ao agendar notificação para ${product.code}:`, error);
       }
