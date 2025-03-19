@@ -6,7 +6,7 @@ import {
   initializeNotifications,
   refreshAllNotifications,
   cancelProductNotifications,
-  scheduleAllProductNotifications
+  scheduleNotifications
 } from '../services/notifications';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
@@ -57,7 +57,7 @@ export function NotificationInitializer() {
         // Fazer uma reverificação das notificações
         if (settings.enabled && !isInitializing) {
           console.log('[NotificationInitializer] Reagendando notificações após retorno ao primeiro plano');
-          scheduleAllProductNotifications().catch(error => {
+          scheduleNotifications().catch(error => {
             console.error('[NotificationInitializer] Erro ao reagendar notificações:', error);
           });
         }
@@ -124,7 +124,7 @@ export function NotificationInitializer() {
             console.log('[NotificationInitializer] Reagendando notificações para Android...');
             
             // Certificar que todas as notificações são reagendadas
-            scheduleAllProductNotifications().catch(error => {
+            scheduleNotifications().catch(error => {
               console.error('[NotificationInitializer] Erro ao agendar notificações:', error);
             });
           }
@@ -169,7 +169,7 @@ export function NotificationInitializer() {
           
           // Para Android, reagendar explicitamente 
           if (Platform.OS === 'android') {
-            return scheduleAllProductNotifications();
+            return scheduleNotifications();
           }
         })
         .catch(error => {
@@ -182,7 +182,7 @@ export function NotificationInitializer() {
   useEffect(() => {
     if (!isInitializing && settings.enabled && products.length > 0) {
       console.log('[NotificationInitializer] Lista de produtos alterada, reagendando notificações...');
-      scheduleAllProductNotifications().catch(error => {
+      scheduleNotifications().catch(error => {
         console.error('[NotificationInitializer] Erro ao reagendar notificações após produtos alterados:', error);
       });
     }
