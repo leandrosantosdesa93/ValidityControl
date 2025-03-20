@@ -46,15 +46,58 @@ function isQuietTime(): boolean {
 }
 
 /**
- * Solicita permissões de notificação
- * @returns {Promise<boolean>} Se as permissões foram concedidas
+ * Solicita e verifica permissões de notificação
  */
 async function requestNotificationPermissions(): Promise<boolean> {
   try {
+    console.log('[Notifications] Verificando permissões...');
+    
+    // Verificar permissões atuais
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    console.log('[Notifications] Status atual:', existingStatus);
+      
+      let finalStatus = existingStatus;
+    
+    // Se não tiver permissão, solicitar
+      if (existingStatus !== 'granted') {
+      console.log('[Notifications] Solicitando permissões...');
         const { status } = await Notifications.requestPermissionsAsync();
-    return status === 'granted';
+        finalStatus = status;
+      console.log('[Notifications] Novo status:', status);
+      }
+      
+    // Se ainda não tiver permissão, mostrar alerta
+      if (finalStatus !== 'granted') {
+      console.log('[Notifications] Permissão negada');
+        Alert.alert(
+        'Permissão Necessária',
+        'Para receber alertas sobre produtos a vencer, você precisa permitir notificações nas configurações do dispositivo.',
+          [
+            { text: 'Depois', style: 'cancel' },
+            { 
+              text: 'Configurações', 
+            onPress: () => {
+              if (Platform.OS === 'android') {
+                Linking.openSettings();
+              } else {
+                Linking.openURL('app-settings:');
+              }
+            }
+            }
+          ]
+        );
+        return false;
+      }
+
+    // Verificar token do dispositivo
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: '6ec78019-eb7c-4b2c-9b7d-98ed6a7f9737' // Seu project ID do app.json
+    });
+    console.log('[Notifications] Token do dispositivo:', token);
+
+      return true;
   } catch (error) {
-    console.error('[Notifications] Erro ao solicitar permissões:', error);
+    console.error('[Notifications] Erro ao verificar permissões:', error);
     return false;
   }
 }
@@ -63,19 +106,30 @@ async function requestNotificationPermissions(): Promise<boolean> {
  * Configura os canais de notificação para Android
  */
 async function setupNotificationChannels(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-  
+  if (Platform.OS === 'android') {
   try {
+    console.log('[Notifications] Configurando canais para Android...');
+    
     await Notifications.setNotificationChannelAsync('expiration-alerts', {
       name: 'Alertas de Validade',
       description: 'Notificações sobre produtos prestes a vencer',
-      importance: Notifications.AndroidImportance.HIGH,
+        importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        enableLights: true,
       lightColor: '#FF231F7C',
       sound: true,
-    });
+        priority: 'max',
+        lockscreenVisibility: 'public'
+      });
+      
+      // Verificar se o canal foi criado
+    const channels = await Notifications.getNotificationChannelsAsync();
+      console.log('[Notifications] Canais configurados:', channels);
+    
   } catch (error) {
-    console.error('[Notifications] Erro ao configurar canais:', error);
+      console.error('[Notifications] Erro ao configurar canais:', error);
+    }
   }
 }
 
@@ -128,10 +182,12 @@ export async function initializeNotifications(): Promise<boolean> {
  */
 export async function scheduleNotifications(): Promise<void> {
   try {
+    console.log('[Notifications] Iniciando agendamento de notificações...');
+    
     // 1. Verificar permissões
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
-      console.log('[Notifications] Permissões não concedidas');
+      console.log('[Notifications] Sem permissões para agendar notificações');
       return;
     }
     
@@ -139,6 +195,8 @@ export async function scheduleNotifications(): Promise<void> {
       await setupNotificationChannels();
 
     // 3. Cancelar notificações existentes
+    const currentNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('[Notifications] Notificações agendadas atualmente:', currentNotifications.length);
     await Notifications.cancelAllScheduledNotificationsAsync();
     
     // 4. Obter produtos e configurações
@@ -157,61 +215,96 @@ export async function scheduleNotifications(): Promise<void> {
       !isNaN(new Date(product.expirationDate).getTime())
     );
 
+    console.log(`[Notifications] Processando ${products.length} produtos...`);
+
     // 6. Agendar notificações
+    let scheduledCount = 0;
     for (const product of products) {
     const expirationDate = new Date(product.expirationDate);
       const daysUntilExpiration = differenceInDays(expirationDate, new Date());
 
       if (notificationDays.includes(daysUntilExpiration)) {
-        const notificationDate = new Date();
-        notificationDate.setHours(9, 0, 0, 0); // 9h da manhã
+        // Agendar para 5 segundos no futuro (teste)
+        const notificationDate = new Date(Date.now() + 5000);
 
-        // Se já passou das 9h, agendar para amanhã
-        if (notificationDate < new Date()) {
-          notificationDate.setDate(notificationDate.getDate() + 1);
+        try {
+          const identifier = await Notifications.scheduleNotificationAsync({
+          content: {
+              title: `ALERTA: ${product.description} está prestes a vencer!`,
+              body: `Faltam ${daysUntilExpiration} dias para o produto vencer. Código: ${product.code}`,
+              data: { productId: product.code },
+        sound: true,
+              priority: 'max',
+              ...(Platform.OS === 'android' && { 
+                channelId: 'expiration-alerts',
+                color: '#FF0000',
+                vibrate: [0, 250, 250, 250]
+              }),
+            },
+            trigger: { 
+              seconds: 5, // Teste: notificação em 5 segundos
+              channelId: 'expiration-alerts'
+            }
+          });
+          
+          console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier})`);
+          scheduledCount++;
+        } catch (error) {
+          console.error(`[Notifications] Erro ao agendar notificação para ${product.description}:`, error);
         }
-
-          await Notifications.scheduleNotificationAsync({
-            content: {
-            title: `ALERTA: ${product.description} está prestes a vencer!`,
-            body: `Faltam ${daysUntilExpiration} dias para o produto vencer. Código: ${product.code}`,
-            data: { productId: product.code },
-            sound: true,
-            ...(Platform.OS === 'android' && { channelId: 'expiration-alerts' }),
-          },
-          trigger: { date: notificationDate }
-        });
       }
     }
 
-    console.log('[Notifications] Notificações agendadas com sucesso');
+    // Verificação final
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    console.log(`[Notifications] Total de ${scheduledCount} notificações agendadas. Verificação: ${scheduledNotifications.length} notificações no sistema.`);
+    
   } catch (error) {
     console.error('[Notifications] Erro ao agendar notificações:', error);
   }
 }
 
 /**
- * Envia uma notificação de teste
+ * Envia uma notificação de teste imediata
  */
 export async function sendTestNotification(): Promise<void> {
   try {
+    console.log('[Notifications] Enviando notificação de teste...');
+    
     const hasPermission = await requestNotificationPermissions();
     if (!hasPermission) {
-      console.log('[Notifications] Permissões não concedidas');
+      console.log('[Notifications] Sem permissões para enviar notificação de teste');
       return;
     }
-          
+
+    // Configurar listener para notificações recebidas
+    const subscription = Notifications.addNotificationReceivedListener(notification => {
+      console.log('[Notifications] Notificação recebida:', notification);
+    });
+
+    // Enviar notificação de teste
           await Notifications.scheduleNotificationAsync({
             content: {
         title: 'Teste de Notificação',
-        body: 'Se você está vendo isso, as notificações estão funcionando!',
+        body: 'Se você está vendo isso, as notificações estão funcionando! ' + new Date().toLocaleTimeString(),
               sound: true,
-        ...(Platform.OS === 'android' && { channelId: 'expiration-alerts' }),
+        priority: 'max',
+        ...(Platform.OS === 'android' && { 
+          channelId: 'expiration-alerts',
+          color: '#FF0000',
+          vibrate: [0, 250, 250, 250]
+        }),
       },
       trigger: { seconds: 1 }
     });
 
     console.log('[Notifications] Notificação de teste enviada');
+
+    // Limpar listener após alguns segundos
+    setTimeout(() => {
+      subscription.remove();
+    }, 5000);
+
       } catch (error) {
     console.error('[Notifications] Erro ao enviar notificação de teste:', error);
   }
