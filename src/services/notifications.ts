@@ -52,50 +52,34 @@ async function requestNotificationPermissions(): Promise<boolean> {
   try {
     console.log('[Notifications] Verificando permissões...');
     
-    // Verificar permissões atuais
+    // Para Android 13 ou superior, verificar permissão POST_NOTIFICATIONS
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    console.log('[Notifications] Status atual:', existingStatus);
+      console.log('[Notifications] Status atual:', existingStatus);
       
-      let finalStatus = existingStatus;
-    
-    // Se não tiver permissão, solicitar
       if (existingStatus !== 'granted') {
-      console.log('[Notifications] Solicitando permissões...');
+        console.log('[Notifications] Solicitando permissões...');
         const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      console.log('[Notifications] Novo status:', status);
-      }
-      
-    // Se ainda não tiver permissão, mostrar alerta
-      if (finalStatus !== 'granted') {
-      console.log('[Notifications] Permissão negada');
-        Alert.alert(
-        'Permissão Necessária',
-        'Para receber alertas sobre produtos a vencer, você precisa permitir notificações nas configurações do dispositivo.',
-          [
-            { text: 'Depois', style: 'cancel' },
-            { 
-              text: 'Configurações', 
-            onPress: () => {
-              if (Platform.OS === 'android') {
-                Linking.openSettings();
-              } else {
-                Linking.openURL('app-settings:');
+        console.log('[Notifications] Novo status:', status);
+        
+        if (status !== 'granted') {
+          Alert.alert(
+            'Permissão Necessária',
+            'Para receber alertas sobre produtos a vencer, você precisa permitir notificações nas configurações do dispositivo.',
+            [
+              { text: 'Depois', style: 'cancel' },
+              { 
+                text: 'Configurações', 
+                onPress: () => Linking.openSettings()
               }
-            }
-            }
-          ]
-        );
-        return false;
+            ]
+          );
+          return false;
+        }
       }
+    }
 
-    // Verificar token do dispositivo
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: '6ec78019-eb7c-4b2c-9b7d-98ed6a7f9737' // Seu project ID do app.json
-    });
-    console.log('[Notifications] Token do dispositivo:', token);
-
-      return true;
+    return true;
   } catch (error) {
     console.error('[Notifications] Erro ao verificar permissões:', error);
     return false;
@@ -107,27 +91,30 @@ async function requestNotificationPermissions(): Promise<boolean> {
  */
 async function setupNotificationChannels(): Promise<void> {
   if (Platform.OS === 'android') {
-  try {
-    console.log('[Notifications] Configurando canais para Android...');
-    
-    await Notifications.setNotificationChannelAsync('expiration-alerts', {
-      name: 'Alertas de Validade',
-      description: 'Notificações sobre produtos prestes a vencer',
+    try {
+      console.log('[Notifications] Configurando canais para Android...');
+      
+      // Primeiro, deletar canal existente para garantir atualização
+      await Notifications.deleteNotificationChannelAsync('expiration-alerts');
+      
+      // Criar novo canal com configurações máximas
+      await Notifications.setNotificationChannelAsync('expiration-alerts', {
+        name: 'Alertas de Validade',
+        description: 'Notificações sobre produtos prestes a vencer',
         importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
+        vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
         enableLights: true,
-      lightColor: '#FF231F7C',
-      sound: true,
+        lightColor: '#FF0000',
+        sound: true,
         priority: 'max',
         lockscreenVisibility: 'public'
       });
       
-      // Verificar se o canal foi criado
-    const channels = await Notifications.getNotificationChannelsAsync();
+      const channels = await Notifications.getNotificationChannelsAsync();
       console.log('[Notifications] Canais configurados:', channels);
-    
-  } catch (error) {
+      
+    } catch (error) {
       console.error('[Notifications] Erro ao configurar canais:', error);
     }
   }
@@ -190,15 +177,15 @@ export async function scheduleNotifications(): Promise<void> {
       console.log('[Notifications] Sem permissões para agendar notificações');
       return;
     }
-    
+
     // 2. Configurar canais para Android
-      await setupNotificationChannels();
+    await setupNotificationChannels();
 
     // 3. Cancelar notificações existentes
     const currentNotifications = await Notifications.getAllScheduledNotificationsAsync();
     console.log('[Notifications] Notificações agendadas atualmente:', currentNotifications.length);
     await Notifications.cancelAllScheduledNotificationsAsync();
-    
+
     // 4. Obter produtos e configurações
     const store = useProductStore.getState();
     const { enabled, notificationDays } = store.notificationSettings;
@@ -207,7 +194,7 @@ export async function scheduleNotifications(): Promise<void> {
       console.log('[Notifications] Notificações desativadas ou sem dias configurados');
       return;
     }
-    
+
     // 5. Filtrar produtos válidos
     const products = store.products.filter(product => 
       product.expirationDate && 
@@ -220,31 +207,26 @@ export async function scheduleNotifications(): Promise<void> {
     // 6. Agendar notificações
     let scheduledCount = 0;
     for (const product of products) {
-    const expirationDate = new Date(product.expirationDate);
+      const expirationDate = new Date(product.expirationDate);
       const daysUntilExpiration = differenceInDays(expirationDate, new Date());
 
-      if (notificationDays.includes(daysUntilExpiration)) {
-        // Agendar para 5 segundos no futuro (teste)
-        const notificationDate = new Date(Date.now() + 5000);
-
+      if (notificationDays.includes(Math.abs(daysUntilExpiration))) {
         try {
           const identifier = await Notifications.scheduleNotificationAsync({
-          content: {
+            content: {
               title: `ALERTA: ${product.description} está prestes a vencer!`,
               body: `Faltam ${daysUntilExpiration} dias para o produto vencer. Código: ${product.code}`,
               data: { productId: product.code },
-        sound: true,
+              sound: true,
               priority: 'max',
+              badge: 1,
               ...(Platform.OS === 'android' && { 
                 channelId: 'expiration-alerts',
                 color: '#FF0000',
                 vibrate: [0, 250, 250, 250]
               }),
             },
-            trigger: { 
-              seconds: 5, // Teste: notificação em 5 segundos
-              channelId: 'expiration-alerts'
-            }
+            trigger: { seconds: 10 } // Notificação em 10 segundos para teste
           });
           
           console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier})`);
@@ -277,35 +259,29 @@ export async function sendTestNotification(): Promise<void> {
       return;
     }
 
-    // Configurar listener para notificações recebidas
-    const subscription = Notifications.addNotificationReceivedListener(notification => {
-      console.log('[Notifications] Notificação recebida:', notification);
-    });
+    // Configurar canais para Android
+    await setupNotificationChannels();
 
     // Enviar notificação de teste
-          await Notifications.scheduleNotificationAsync({
-            content: {
+    const identifier = await Notifications.scheduleNotificationAsync({
+      content: {
         title: 'Teste de Notificação',
         body: 'Se você está vendo isso, as notificações estão funcionando! ' + new Date().toLocaleTimeString(),
-              sound: true,
+        sound: true,
         priority: 'max',
+        badge: 1,
         ...(Platform.OS === 'android' && { 
           channelId: 'expiration-alerts',
           color: '#FF0000',
           vibrate: [0, 250, 250, 250]
         }),
       },
-      trigger: { seconds: 1 }
+      trigger: { seconds: 5 }
     });
 
-    console.log('[Notifications] Notificação de teste enviada');
+    console.log('[Notifications] Notificação de teste enviada com ID:', identifier);
 
-    // Limpar listener após alguns segundos
-    setTimeout(() => {
-      subscription.remove();
-    }, 5000);
-
-      } catch (error) {
+  } catch (error) {
     console.error('[Notifications] Erro ao enviar notificação de teste:', error);
   }
 }
