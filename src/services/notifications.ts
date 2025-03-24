@@ -807,61 +807,57 @@ export function registerNotificationListeners(): () => void {
   };
 }
 
-// Função para verificar o status das permissões de notificação
-export async function checkNotificationPermissions(): Promise<Notifications.PermissionResponse> {
+/**
+ * Verifica se o app tem permissão para enviar notificações
+ */
+export async function checkNotificationPermissions(): Promise<boolean> {
   try {
-    const permissionStatus = await Notifications.getPermissionsAsync();
-    console.log('[Notifications] Status de permissões:', permissionStatus);
-    return permissionStatus;
+    if (!Device.isDevice) {
+      console.log('[Notifications] Executando em emulador, permissões concedidas');
+      return true;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    console.log('[Notifications] Status atual:', existingStatus);
+    
+    if (existingStatus !== 'granted') {
+      console.log('[Notifications] Solicitando permissões...');
+      const { status } = await Notifications.requestPermissionsAsync();
+      console.log('[Notifications] Novo status:', status);
+      return status === 'granted';
+    }
+
+    return true;
   } catch (error) {
     console.error('[Notifications] Erro ao verificar permissões:', error);
-    throw error;
+    return false;
   }
 }
 
-// Configura as notificações iniciais
+/**
+ * Configura o sistema de notificações
+ */
 export async function setupNotifications(): Promise<void> {
-  console.log('[Notifications] Configurando notificações...');
-  const store = useProductStore.getState();
-  
-  // Apenas prossegue se as notificações estiverem habilitadas
-  if (!store.notificationSettings.enabled) {
-    console.log('[Notifications] Notificações desabilitadas no app');
-    return;
-  }
-  
   try {
-    // Configurar handler global de notificações
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: store.notificationSettings.soundEnabled,
-        shouldSetBadge: true,
-      }),
-    });
+    console.log('[Notifications] Configurando sistema de notificações...');
+    
+    // 1. Verificar permissões
+    const hasPermission = await checkNotificationPermissions();
+    if (!hasPermission) {
+      console.log('[Notifications] Sem permissões para configurar notificações');
+      return;
+    }
 
-    // Configurar canais para Android
+    // 2. Configurar canais para Android
     if (Platform.OS === 'android') {
       await setupNotificationChannels();
     }
-    
-    // Verificar permissões
-    const permissionGranted = await requestNotificationPermissions();
-    if (!permissionGranted) {
-      console.log('[Notifications] Permissões não concedidas');
-      return;
-    }
-    
-    // Cancelar notificações existentes antes de reagendar
+
+    // 3. Cancelar notificações existentes para evitar duplicatas
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('[Notifications] Notificações anteriores canceladas');
-    
-    // Agendar notificações para produtos prestes a vencer
-    await scheduleNotifications();
-    
-    console.log('[Notifications] Notificações configuradas com sucesso');
+    console.log('[Notifications] Configuração concluída com sucesso');
   } catch (error) {
-    console.error('[Notifications] Erro na configuração de notificações:', error);
+    console.error('[Notifications] Erro ao configurar notificações:', error);
   }
 }
 
@@ -924,9 +920,9 @@ export async function testMultipleNotificationMethods(): Promise<string[]> {
     
     // Verificar permissões
     const permStatus = await checkNotificationPermissions();
-    console.log('[Notifications] Status de permissão:', permStatus.status);
+    console.log('[Notifications] Status de permissão:', permStatus);
     
-    if (permStatus.status !== 'granted') {
+    if (permStatus !== 'granted') {
       console.log('[Notifications] Solicitando permissões...');
       const granted = await requestNotificationPermissions();
       if (!granted) {
