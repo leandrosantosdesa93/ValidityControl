@@ -61,21 +61,21 @@ async function requestNotificationPermissions(): Promise<boolean> {
         console.log('[Notifications] Solicitando permissões...');
         const { status } = await Notifications.requestPermissionsAsync();
         console.log('[Notifications] Novo status:', status);
-        
+      
         if (status !== 'granted') {
-          Alert.alert(
+        Alert.alert(
             'Permissão Necessária',
             'Para receber alertas sobre produtos a vencer, você precisa permitir notificações nas configurações do dispositivo.',
-            [
-              { text: 'Depois', style: 'cancel' },
-              { 
-                text: 'Configurações', 
-                onPress: () => Linking.openSettings()
-              }
-            ]
-          );
-          return false;
-        }
+          [
+            { text: 'Depois', style: 'cancel' },
+            { 
+              text: 'Configurações', 
+              onPress: () => Linking.openSettings()
+            }
+          ]
+        );
+        return false;
+      }
       }
     }
 
@@ -91,30 +91,30 @@ async function requestNotificationPermissions(): Promise<boolean> {
  */
 async function setupNotificationChannels(): Promise<void> {
   if (Platform.OS === 'android') {
-    try {
-      console.log('[Notifications] Configurando canais para Android...');
-      
+  try {
+    console.log('[Notifications] Configurando canais para Android...');
+    
       // Primeiro, deletar canal existente para garantir atualização
       await Notifications.deleteNotificationChannelAsync('expiration-alerts');
       
       // Criar novo canal com configurações máximas
-      await Notifications.setNotificationChannelAsync('expiration-alerts', {
-        name: 'Alertas de Validade',
-        description: 'Notificações sobre produtos prestes a vencer',
+    await Notifications.setNotificationChannelAsync('expiration-alerts', {
+      name: 'Alertas de Validade',
+      description: 'Notificações sobre produtos prestes a vencer',
         importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
+      vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
         enableLights: true,
         lightColor: '#FF0000',
-        sound: true,
+      sound: true,
         priority: 'max',
         lockscreenVisibility: 'public'
       });
       
-      const channels = await Notifications.getNotificationChannelsAsync();
+    const channels = await Notifications.getNotificationChannelsAsync();
       console.log('[Notifications] Canais configurados:', channels);
-      
-    } catch (error) {
+    
+  } catch (error) {
       console.error('[Notifications] Erro ao configurar canais:', error);
     }
   }
@@ -177,15 +177,15 @@ export async function scheduleNotifications(): Promise<void> {
       console.log('[Notifications] Sem permissões para agendar notificações');
       return;
     }
-
+    
     // 2. Configurar canais para Android
-    await setupNotificationChannels();
+      await setupNotificationChannels();
 
     // 3. Cancelar notificações existentes
     const currentNotifications = await Notifications.getAllScheduledNotificationsAsync();
     console.log('[Notifications] Notificações agendadas atualmente:', currentNotifications.length);
     await Notifications.cancelAllScheduledNotificationsAsync();
-
+    
     // 4. Obter produtos e configurações
     const store = useProductStore.getState();
     const { enabled, notificationDays } = store.notificationSettings;
@@ -194,7 +194,7 @@ export async function scheduleNotifications(): Promise<void> {
       console.log('[Notifications] Notificações desativadas ou sem dias configurados');
       return;
     }
-
+    
     // 5. Filtrar produtos válidos
     const products = store.products.filter(product => 
       product.expirationDate && 
@@ -207,11 +207,22 @@ export async function scheduleNotifications(): Promise<void> {
     // 6. Agendar notificações
     let scheduledCount = 0;
     for (const product of products) {
-      const expirationDate = new Date(product.expirationDate);
+    const expirationDate = new Date(product.expirationDate);
       const daysUntilExpiration = differenceInDays(expirationDate, new Date());
 
-      if (notificationDays.includes(Math.abs(daysUntilExpiration))) {
+      // Verificar se o produto está próximo do vencimento
+      if (daysUntilExpiration > 0 && notificationDays.includes(daysUntilExpiration)) {
         try {
+          // Calcular o horário da notificação (9:00 AM do dia)
+          const notificationDate = new Date(expirationDate);
+          notificationDate.setHours(9, 0, 0, 0);
+          
+          // Se a data já passou, não agendar
+          if (notificationDate.getTime() <= Date.now()) {
+            console.log(`[Notifications] Data de notificação já passou para ${product.description}`);
+            continue;
+          }
+
           const identifier = await Notifications.scheduleNotificationAsync({
             content: {
               title: `ALERTA: ${product.description} está prestes a vencer!`,
@@ -226,10 +237,13 @@ export async function scheduleNotifications(): Promise<void> {
                 vibrate: [0, 250, 250, 250]
               }),
             },
-            trigger: { seconds: 10 } // Notificação em 10 segundos para teste
+            trigger: { 
+              date: notificationDate,
+              channelId: 'expiration-alerts'
+            }
           });
           
-          console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier})`);
+          console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier}) em ${notificationDate.toLocaleString()}`);
           scheduledCount++;
         } catch (error) {
           console.error(`[Notifications] Erro ao agendar notificação para ${product.description}:`, error);
@@ -264,10 +278,10 @@ export async function sendTestNotification(): Promise<void> {
 
     // Enviar notificação de teste
     const identifier = await Notifications.scheduleNotificationAsync({
-      content: {
+            content: {
         title: 'Teste de Notificação',
         body: 'Se você está vendo isso, as notificações estão funcionando! ' + new Date().toLocaleTimeString(),
-        sound: true,
+              sound: true,
         priority: 'max',
         badge: 1,
         ...(Platform.OS === 'android' && { 
@@ -281,7 +295,7 @@ export async function sendTestNotification(): Promise<void> {
 
     console.log('[Notifications] Notificação de teste enviada com ID:', identifier);
 
-  } catch (error) {
+      } catch (error) {
     console.error('[Notifications] Erro ao enviar notificação de teste:', error);
   }
 }
@@ -723,7 +737,7 @@ export async function rescheduleNotifications(): Promise<void> {
     // Cancelar notificações existentes
     try {
       console.log('[Notifications] Cancelando notificações existentes...');
-      await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.cancelAllScheduledNotificationsAsync();
       console.log('[Notifications] Notificações existentes canceladas com sucesso');
     } catch (error) {
       console.error('[Notifications] Erro ao cancelar notificações existentes:', error);
