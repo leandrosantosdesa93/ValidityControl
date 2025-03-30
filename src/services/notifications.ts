@@ -210,25 +210,14 @@ export async function scheduleNotifications(): Promise<void> {
     const expirationDate = new Date(product.expirationDate);
       const daysUntilExpiration = differenceInDays(expirationDate, new Date());
 
-      // Verificar se o produto está próximo do vencimento
-      if (daysUntilExpiration > 0 && notificationDays.includes(daysUntilExpiration)) {
+      if (notificationDays.includes(Math.abs(daysUntilExpiration))) {
         try {
-          // Calcular o horário da notificação (9:00 AM do dia)
-          const notificationDate = new Date(expirationDate);
-          notificationDate.setHours(9, 0, 0, 0);
-          
-          // Se a data já passou, não agendar
-          if (notificationDate.getTime() <= Date.now()) {
-            console.log(`[Notifications] Data de notificação já passou para ${product.description}`);
-            continue;
-          }
-
           const identifier = await Notifications.scheduleNotificationAsync({
-            content: {
+          content: {
               title: `ALERTA: ${product.description} está prestes a vencer!`,
               body: `Faltam ${daysUntilExpiration} dias para o produto vencer. Código: ${product.code}`,
               data: { productId: product.code },
-              sound: true,
+        sound: true,
               priority: 'max',
               badge: 1,
               ...(Platform.OS === 'android' && { 
@@ -237,13 +226,10 @@ export async function scheduleNotifications(): Promise<void> {
                 vibrate: [0, 250, 250, 250]
               }),
             },
-            trigger: { 
-              date: notificationDate,
-              channelId: 'expiration-alerts'
-            }
+            trigger: { seconds: 10 } // Notificação em 10 segundos para teste
           });
           
-          console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier}) em ${notificationDate.toLocaleString()}`);
+          console.log(`[Notifications] Agendada notificação para ${product.description} (ID: ${identifier})`);
           scheduledCount++;
         } catch (error) {
           console.error(`[Notifications] Erro ao agendar notificação para ${product.description}:`, error);

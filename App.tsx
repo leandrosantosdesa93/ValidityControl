@@ -41,40 +41,23 @@ export default function App() {
       try {
         console.log('[App] Iniciando aplicativo...');
         
-        // 1. Inicializar o store
-        console.log('[App] Inicializando store...');
-        await store.hydrate();
-        
-        // 2. Verificar se há produtos
-        if (store.products.length === 0) {
-          console.log('[App] Nenhum produto cadastrado');
-          return;
-        }
-
-        // 3. Verificar configurações de notificação
-        const { enabled } = store.notificationSettings;
-        if (!enabled) {
-          console.log('[App] Notificações desativadas nas configurações');
-          return;
-        }
-        
-        // 4. Configurar notificações
+        // Configurar notificações
         console.log('[App] Configurando notificações...');
         
-        // 5. Verificar e solicitar permissões
+        // Verificar e solicitar permissões
         const hasPermission = await checkNotificationPermissions();
         if (!hasPermission) {
           console.log('[App] Permissões de notificação não concedidas');
           return;
         }
         
-        // 6. Configurar notificações no Android
+        // Configurar notificações no Android
         if (Platform.OS === 'android') {
           console.log('[App] Configurando sistema de notificações...');
           await setupNotifications();
         }
         
-        // 7. Agendar notificações
+        // Agendar notificações
         console.log('[App] Agendando notificações...');
         await scheduleNotifications();
         
@@ -96,11 +79,8 @@ export default function App() {
       if (nextAppState === 'active') {
         console.log('[App] Aplicativo voltou para o primeiro plano');
         try {
-          // Verificar se há produtos e se as notificações estão ativas
-          if (store.products.length > 0 && store.notificationSettings.enabled) {
-            // Reagendar notificações quando o app volta ao primeiro plano
-            await scheduleNotifications();
-          }
+          // Reagendar notificações quando o app volta ao primeiro plano
+          await scheduleNotifications();
         } catch (error) {
           console.error('[App] Erro ao reagendar notificações:', error);
         }
@@ -110,7 +90,7 @@ export default function App() {
     return () => {
       subscription.remove();
     };
-  }, [store.products.length, store.notificationSettings.enabled]);
+  }, []);
 
   // Configurar listeners de notificações
   useEffect(() => {
