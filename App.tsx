@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import { AppState, Platform, View } from 'react-native';
+import { AppState, Platform, View, Alert, Linking } from 'react-native';
 import { useProductStore } from './src/store/productStore';
 import { ActivityIndicator } from 'react-native-paper';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { scheduleNotifications, setupNotifications, checkNotificationPermissions } from './src/services/notifications';
+import { scheduleNotifications, setupNotifications, checkNotificationPermissions, setupNotificationChannels } from './src/services/notifications';
 import HomeScreen from './src/screens/HomeScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,27 +41,43 @@ export default function App() {
       try {
         console.log('[App] Iniciando aplicativo...');
         
-        // Configurar notificações
-        console.log('[App] Configurando notificações...');
+        // Verificar permissões de notificação
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        console.log('[App] Status atual de permissões:', existingStatus);
         
-        // Verificar e solicitar permissões
-        const hasPermission = await checkNotificationPermissions();
-        if (!hasPermission) {
-          console.log('[App] Permissões de notificação não concedidas');
-          return;
+        if (existingStatus !== 'granted') {
+          console.log('[App] Solicitando permissões de notificação...');
+          const { status } = await Notifications.requestPermissionsAsync();
+          
+          if (status !== 'granted') {
+            console.warn('[App] Permissões de notificação não concedidas');
+            Alert.alert(
+              'Permissão Necessária',
+              'Para receber alertas sobre produtos a vencer, você precisa permitir notificações nas configurações do dispositivo.',
+              [
+                { text: 'Depois', style: 'cancel' },
+                { 
+                  text: 'Configurações', 
+                  onPress: () => Linking.openSettings()
+                }
+              ]
+            );
+            return;
+          }
         }
         
-        // Configurar notificações no Android
+        // Configurar canais de notificação no Android
         if (Platform.OS === 'android') {
-          console.log('[App] Configurando sistema de notificações...');
-          await setupNotifications();
+          console.log('[App] Configurando canais de notificação...');
+          await setupNotificationChannels();
         }
         
-        // Agendar notificações
-        console.log('[App] Agendando notificações...');
-        await scheduleNotifications();
+        // Agendar notificações iniciais
+        if (store.notificationSettings.enabled) {
+          console.log('[App] Agendando notificações iniciais...');
+          await scheduleNotifications();
+        }
         
-        console.log('[App] Inicialização concluída');
       } catch (e) {
         console.error('[App] Erro durante inicialização:', e);
       } finally {
@@ -73,16 +89,24 @@ export default function App() {
     prepare();
   }, []);
 
-  // Monitorar mudanças no estado do app (background/foreground)
+  // Monitorar mudanças no estado do app
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'active') {
         console.log('[App] Aplicativo voltou para o primeiro plano');
-        try {
-          // Reagendar notificações quando o app volta ao primeiro plano
-          await scheduleNotifications();
-        } catch (error) {
-          console.error('[App] Erro ao reagendar notificações:', error);
+        if (store.notificationSettings.enabled) {
+          try {
+            // Verificar e reagendar notificações
+            const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+            console.log('[App] Notificações agendadas:', scheduled.length);
+            
+            if (scheduled.length === 0) {
+              console.log('[App] Nenhuma notificação agendada, reagendando...');
+              await scheduleNotifications();
+            }
+          } catch (error) {
+            console.error('[App] Erro ao verificar notificações:', error);
+          }
         }
       }
     });
@@ -90,7 +114,7 @@ export default function App() {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [store.notificationSettings.enabled]);
 
   // Configurar listeners de notificações
   useEffect(() => {
