@@ -1,17 +1,59 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, View, Image, Pressable, Alert, ActivityIndicator, RefreshControl, TouchableOpacity, Share } from 'react-native';
-import { ThemedView } from '@components/ThemedView';
-import { ThemedText } from '@components/ThemedText';
-import { Product } from '@/types/Product';
+import { ThemedView } from '../components/ThemedView';
+import { ThemedText } from '../components/ThemedText';
+import { Product } from '../src/types/Product';
 import { format, differenceInDays, startOfDay, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getProducts, deleteProduct } from '@/services/ProductService';
-import { useColorScheme } from '@hooks/useColorScheme';
-import { eventEmitter, PRODUCT_EVENTS } from '@/services/EventEmitter';
+import { getProducts, deleteProduct } from '../src/services/ProductService';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { eventEmitter, PRODUCT_EVENTS } from '../src/services/EventEmitter';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { printToFileAsync } from 'expo-print';
+import { NavigationService } from '../src/navigation/navigationService';
+
+// Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
+function safeNavigate(route: string | object, params?: any) {
+  try {
+    // Tenta usar o NavigationService primeiro
+    if (NavigationService.isReady()) {
+      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via NavigationService`);
+      
+      // Se for um objeto (como um href do Expo Router), extraímos o caminho
+      if (typeof route === 'object' && (route as any).pathname) {
+        const routeObj = route as any;
+        let navRoute = routeObj.pathname;
+        
+        // Conversão de rotas
+        if (navRoute === '/register') {
+          NavigationService.navigate('Add', routeObj.params || params);
+        } else {
+          NavigationService.navigate(navRoute as any, routeObj.params || params);
+        }
+      } else if (typeof route === 'string') {
+        // Converte entre nomes de rotas se necessário
+        let navRoute = route;
+        if (route === '/register') navRoute = 'Add';
+        
+        NavigationService.navigate(navRoute as any, params);
+      }
+    } else {
+      // Fallback para o router do Expo
+      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via Expo Router`);
+      router.push(route as any);
+    }
+  } catch (error) {
+    console.error('[Navigation] Erro ao navegar:', error);
+    // Se falhar, tenta o router do Expo como última opção
+    try {
+      router.push(route as any);
+    } catch (routerError) {
+      console.error('[Navigation] Também falhou com router:', routerError);
+    }
+  }
+}
 
 export default function ExpiredScreen() {
   const colorScheme = useColorScheme();

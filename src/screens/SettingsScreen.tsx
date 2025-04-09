@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Switch } from 'react-native';
 import { useProductStore } from '../store/productStore';
+import { RootTabScreenProps } from '../types/navigation';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }: RootTabScreenProps<'Settings'>) {
   const { notificationSettings, setNotificationsEnabled, toggleQuietHours } = useProductStore();
 
   return (

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Product } from '@/types/product';
+import { Product } from '@/types/Product';
 import { differenceInDays, isAfter, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
 
 interface NotificationSettings {
@@ -283,9 +283,13 @@ export const useProductStore = create<ProductState>()(
           p.code,
           p.description,
           p.quantity.toString(),
-          p.expirationDate.toISOString(),
+          typeof p.expirationDate === 'object' && p.expirationDate instanceof Date 
+            ? p.expirationDate.toISOString() 
+            : String(p.expirationDate),
           p.isFavorite ? 'Sim' : 'Não',
-          p.createdAt.toISOString(),
+          typeof p.createdAt === 'object' && p.createdAt instanceof Date 
+            ? p.createdAt.toISOString() 
+            : String(p.createdAt),
         ]);
 
         const csv = [
@@ -301,9 +305,14 @@ export const useProductStore = create<ProductState>()(
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         set((state) => ({
-          products: state.products.filter(p => 
-            isAfter(p.expirationDate, thirtyDaysAgo)
-          ),
+          products: state.products.filter(p => {
+            // Verificar se é um objeto Date, se não for, tentar converter
+            const expirationDate = p.expirationDate instanceof Date 
+              ? p.expirationDate 
+              : new Date(p.expirationDate);
+            
+            return isAfter(expirationDate, thirtyDaysAgo);
+          }),
         }));
       },
 

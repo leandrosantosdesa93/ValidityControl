@@ -1,9 +1,37 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import { useProductStore } from '../store/productStore';
+import { RootTabScreenProps } from '../types/navigation';
+import { eventEmitter, PRODUCT_EVENTS } from '../services/EventEmitter';
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: RootTabScreenProps<'Home'>) {
   const { products } = useProductStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const loadData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Aqui você pode adicionar lógica adicional de carregamento se necessário
+    } catch (error) {
+      console.error('[Home] Erro ao carregar dados:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log('[Home] Configurando listener de eventos...');
+    const unsubscribe = eventEmitter.subscribe(PRODUCT_EVENTS.UPDATED, () => {
+      console.log('[Home] Evento de atualização recebido');
+      loadData();
+    });
+
+    return () => {
+      console.log('[Home] Removendo listener de eventos');
+      unsubscribe();
+    };
+  }, [loadData]);
+
   const expiringProducts = products.filter(product => {
     const expirationDate = new Date(product.expirationDate);
     const today = new Date();
@@ -12,22 +40,37 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={loadData}
+          colors={['#00A1DF']}
+        />
+      }
+    >
       <Text style={styles.title}>Produtos a Vencer</Text>
       {expiringProducts.length > 0 ? (
         expiringProducts.map(product => (
-          <View key={product.code} style={styles.productCard}>
+          <TouchableOpacity 
+            key={product.code} 
+            style={styles.productCard}
+            onPress={() => {
+              console.log('Produto selecionado:', product.code);
+            }}
+          >
             <Text style={styles.productCode}>{product.code}</Text>
             <Text style={styles.productDescription}>{product.description}</Text>
             <Text style={styles.productExpiration}>
               Vence em: {new Date(product.expirationDate).toLocaleDateString('pt-BR')}
             </Text>
-          </View>
+          </TouchableOpacity>
         ))
       ) : (
         <Text style={styles.emptyText}>Nenhum produto próximo do vencimento</Text>
       )}
-    </View>
+    </ScrollView>
   );
 }
 

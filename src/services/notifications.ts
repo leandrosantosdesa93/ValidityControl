@@ -91,9 +91,9 @@ async function requestNotificationPermissions(): Promise<boolean> {
  */
 async function setupNotificationChannels(): Promise<void> {
   if (Platform.OS === 'android') {
-    try {
-      console.log('[Notifications] Configurando canais para Android...');
-      
+  try {
+    console.log('[Notifications] Configurando canais para Android...');
+    
       // Deletar todos os canais existentes para garantir uma configuração limpa
       const existingChannels = await Notifications.getNotificationChannelsAsync();
       for (const channel of existingChannels) {
@@ -102,10 +102,10 @@ async function setupNotificationChannels(): Promise<void> {
       
       // Criar um único canal principal com configurações máximas
       await Notifications.setNotificationChannelAsync('validity-control-main', {
-        name: 'Alertas de Validade',
+      name: 'Alertas de Validade',
         description: 'Notificações sobre produtos próximos ao vencimento',
         importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
+      vibrationPattern: [0, 250, 250, 250],
         enableVibrate: true,
         enableLights: true,
         lightColor: '#FF0000',
@@ -116,7 +116,7 @@ async function setupNotificationChannels(): Promise<void> {
       });
       
       console.log('[Notifications] Canal principal configurado com sucesso');
-    } catch (error) {
+  } catch (error) {
       console.error('[Notifications] Erro ao configurar canais:', error);
     }
   }
@@ -187,7 +187,7 @@ export async function scheduleNotifications(): Promise<void> {
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       console.warn('[Notifications] Sem permissões para agendar notificações');
-      return;
+        return;
     }
     
     // Cancelar notificações existentes para evitar duplicatas
@@ -221,7 +221,7 @@ export async function scheduleNotifications(): Promise<void> {
           
           try {
             const identifier = await Notifications.scheduleNotificationAsync({
-              content: {
+            content: {
                 title: `Produto próximo ao vencimento!`,
                 body: `${product.name} vence em ${days} ${days === 1 ? 'dia' : 'dias'}`,
                 data: { productId: product.code },
@@ -231,8 +231,8 @@ export async function scheduleNotifications(): Promise<void> {
                   channelId: 'validity-control-main',
                   color: days <= 3 ? '#FF0000' : days <= 5 ? '#FFA500' : '#FFD700'
                 })
-              },
-              trigger: {
+            },
+            trigger: { 
                 date: notificationDate,
                 channelId: 'validity-control-main'
               }

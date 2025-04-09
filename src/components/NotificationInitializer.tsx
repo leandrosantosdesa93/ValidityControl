@@ -10,6 +10,7 @@ import {
 } from '../services/notifications';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import * as SplashScreen from 'expo-splash-screen';
+import { NavigationService } from '../navigation/navigationService';
 
 // Configurar o handler global de notificações
 Notifications.setNotificationHandler({
@@ -21,7 +22,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export function NotificationInitializer() {
+export default function NotificationInitializer() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [initStatus, setInitStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
@@ -35,6 +36,7 @@ export function NotificationInitializer() {
   const autoUpdate = useAutoUpdate();
   
   useEffect(() => {
+    console.log('[NotificationInitializer] Componente montado');
     try {
       // Executar a função retornada pelo hook (não o próprio hook)
       autoUpdate.checkForUpdates().catch(error => {
@@ -95,6 +97,20 @@ export function NotificationInitializer() {
         if (product?.isSold) {
           console.log('[NotificationInitializer] Produto já foi vendido, cancelando notificações:', productId);
           cancelProductNotifications(productId);
+        } else {
+          // Navegar para a tela do produto
+          try {
+            console.log('[NotificationInitializer] Navegando para o produto:', productId);
+            
+            // Tentar navegar usando o serviço de navegação unificado
+            if (NavigationService.isReady()) {
+              NavigationService.navigate('Products');
+            } else {
+              console.warn('[NotificationInitializer] NavigationService não está pronto');
+            }
+          } catch (error) {
+            console.error('[NotificationInitializer] Erro ao navegar:', error);
+          }
         }
       }
     });

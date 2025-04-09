@@ -1,17 +1,22 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions, Pressable, Text, RefreshControl } from 'react-native';
-import { ThemedView } from '@components/ThemedView';
-import { ThemedText } from '@components/ThemedText';
-import { useColorScheme } from '@hooks/useColorScheme';
-import { useProductStore } from '@/store/productStore';
-import { getProducts } from '@/services/ProductService';
-import { Product } from '@/types/Product';
+import { ThemedView } from '../components/ThemedView';
+import { ThemedText } from '../components/ThemedText';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { useProductStore } from '../src/store/productStore';
+import { getProducts } from '../src/services/ProductService';
+import { Product } from '../src/types/Product';
 import { Ionicons } from '@expo/vector-icons';
 import { differenceInDays, format, startOfDay, addDays, isBefore, isAfter, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { router, useFocusEffect } from 'expo-router';
-import { eventEmitter, PRODUCT_EVENTS } from '@/services/EventEmitter';
+import { eventEmitter, PRODUCT_EVENTS } from '../src/services/EventEmitter';
 import Svg, { Circle, Line, Rect } from 'react-native-svg';
+import { NavigationService } from '../src/navigation/navigationService';
+
+// Log para diagnóstico
+console.log('[AppIndex] Inicializando HomeScreen do Expo Router');
+console.log('[AppIndex] Status NavigationService.isReady():', NavigationService.isReady());
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -162,6 +167,40 @@ function SimpleDonutChart({ data, size, isDark }: DonutChartProps) {
       </View>
     </View>
   );
+}
+
+// Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
+function safeNavigate(route: string, params?: any) {
+  try {
+    // Tenta usar o NavigationService primeiro
+    if (NavigationService.isReady()) {
+      console.log(`[Navigation] Navegando para ${route} via NavigationService`);
+      // Converte entre nomes de rotas se necessário
+      let navRoute = route;
+      if (route === '/products') navRoute = 'Products';
+      if (route === '/expiring') navRoute = 'Expiring';
+      if (route === '/expired') navRoute = 'Expired';
+      if (route === '/register') navRoute = 'Add';
+      
+      NavigationService.navigate(navRoute as any, params);
+    } else {
+      // Fallback para o router do Expo
+      console.log(`[Navigation] Navegando para ${route} via Expo Router`);
+      if (typeof route === 'string' && route.startsWith('/')) {
+        router.push(route);
+      } else {
+        router.push(`/${route}`);
+      }
+    }
+  } catch (error) {
+    console.error('[Navigation] Erro ao navegar:', error);
+    // Se falhar, tenta o router do Expo como última opção
+    try {
+      router.push(typeof route === 'string' && route.startsWith('/') ? route : `/${route}`);
+    } catch (routerError) {
+      console.error('[Navigation] Também falhou com router:', routerError);
+    }
+  }
 }
 
 export default function HomeScreen() {
@@ -383,7 +422,7 @@ export default function HomeScreen() {
           <View style={styles.statsContainer}>
             <Pressable 
               style={[styles.statsCard, { backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}
-              onPress={() => router.push('/products')}
+              onPress={() => safeNavigate('/products')}
             >
               <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
                 <Ionicons name="cube" size={24} color="#2196F3" />
@@ -394,7 +433,7 @@ export default function HomeScreen() {
 
             <Pressable 
               style={[styles.statsCard, { backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}
-              onPress={() => router.push('/expiring')}
+              onPress={() => safeNavigate('/expiring')}
             >
               <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
                 <Ionicons name="warning" size={24} color="#FFA726" />
@@ -405,7 +444,7 @@ export default function HomeScreen() {
 
             <Pressable 
               style={[styles.statsCard, { backgroundColor: isDark ? '#1a1a1a' : '#fff' }]}
-              onPress={() => router.push('/expired')}
+              onPress={() => safeNavigate('/expired')}
             >
               <View style={[styles.iconContainer, { backgroundColor: '#FFEBEE' }]}>
                 <Ionicons name="alert-circle" size={24} color="#EF5350" />
@@ -451,7 +490,7 @@ export default function HomeScreen() {
           <View style={styles.actionButtons}>
             <Pressable
               style={[styles.actionButton, { backgroundColor: '#2196F3' }]}
-              onPress={() => router.push('/register')}
+              onPress={() => safeNavigate('/register')}
             >
               <Ionicons name="add" size={24} color="#fff" />
               <ThemedText style={styles.actionButtonText}>Novo Produto</ThemedText>
@@ -459,7 +498,7 @@ export default function HomeScreen() {
 
             <Pressable
               style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
-              onPress={() => router.push('/products')}
+              onPress={() => safeNavigate('/products')}
             >
               <Ionicons name="list" size={24} color="#fff" />
               <ThemedText style={styles.actionButtonText}>Ver Todos</ThemedText>

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Switch, TextInput, Alert, Pressable, Platform } from 'react-native';
-import { ThemedView } from '@components/ThemedView';
-import { ThemedText } from '@components/ThemedText';
-import { useColorScheme } from '@hooks/useColorScheme';
+import { ThemedView } from '../components/ThemedView';
+import { ThemedText } from '../components/ThemedText';
+import { useColorScheme } from '../hooks/useColorScheme';
 import { useProductStore } from '../src/store/productStore';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 
-function SettingsScreen() {
+// Nota: Este componente foi adaptado para evitar o erro "Couldn't find a navigation object. Is your component inside NavigationContainer?"
+// Agora estamos usando apenas hooks do React (useEffect) em vez de hooks específicos de navegação
+
+export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const store = useProductStore();
@@ -54,13 +56,26 @@ function SettingsScreen() {
     });
   };
 
-  // Efeito para carregar dados quando a tela recebe foco
-  useFocusEffect(
-    React.useCallback(() => {
+  // Efeito para carregar dados quando a tela recebe foco - usando Expo Router
+  useEffect(() => {
+    console.log('[Settings] Tela montada - Carregando dados...');
+    loadInitialData();
+  }, []);
+  
+  // Adicional: Usando useEffect para simular o comportamento de focus
+  useEffect(() => {
+    const unsubscribe = () => {
       console.log('[Settings] Tela recebeu foco - Carregando dados...');
       loadInitialData();
-    }, [])
-  );
+    };
+    
+    // Executar quando o componente montar
+    unsubscribe();
+    
+    return () => {
+      console.log('[Settings] Tela perdeu foco');
+    };
+  }, []);
 
   // Efeito para inicializar os valores quando as configurações mudam
   useEffect(() => {
@@ -477,6 +492,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
-
-export default SettingsScreen; 
+}); 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Modal, View, Text, StyleSheet, Linking, Platform, TouchableOpacity, Alert, BackHandler } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useColorScheme } from '@hooks/useColorScheme';
+import { useColorScheme } from '../../hooks/useColorScheme';
 
 interface UpdateModalProps {
   isVisible: boolean;

@@ -24,6 +24,7 @@ import { useColorScheme } from '@hooks/useColorScheme';
 import { ThemedView } from '@components/ThemedView';
 import { ThemedText } from '@components/ThemedText';
 import { Product } from '@/types/Product';
+import { NavigationService } from '@/navigation/navigationService';
 
 // Interface para dados do formulário que corresponde ao tipo esperado por saveProduct
 type ProductFormData = {
@@ -40,6 +41,69 @@ interface FormErrors {
   expirationDate?: string;
   quantity?: string;
   code?: string;
+}
+
+// Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
+function safeNavigate(route: string | object, params?: any) {
+  try {
+    // Tenta usar o NavigationService primeiro
+    if (NavigationService.isReady()) {
+      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via NavigationService`);
+      
+      // Se for um objeto (como um href do Expo Router), extraímos o caminho
+      if (typeof route === 'object' && (route as any).pathname) {
+        const routeObj = route as any;
+        let navRoute = routeObj.pathname;
+        
+        // Conversão de rotas
+        if (navRoute === '/products') {
+          NavigationService.navigate('Products', routeObj.params || params);
+        } else {
+          NavigationService.navigate(navRoute as any, routeObj.params || params);
+        }
+      } else if (typeof route === 'string') {
+        // Converte entre nomes de rotas se necessário
+        let navRoute = route;
+        if (route === '/products') navRoute = 'Products';
+        
+        NavigationService.navigate(navRoute as any, params);
+      }
+    } else {
+      // Fallback para o router do Expo
+      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via Expo Router`);
+      router.push(route as any);
+    }
+  } catch (error) {
+    console.error('[Navigation] Erro ao navegar:', error);
+    // Se falhar, tenta o router do Expo como última opção
+    try {
+      router.push(route as any);
+    } catch (routerError) {
+      console.error('[Navigation] Também falhou com router:', routerError);
+    }
+  }
+}
+
+// Função auxiliar para voltar na navegação
+function safeGoBack() {
+  try {
+    if (NavigationService.isReady()) {
+      console.log('[Navigation] Voltando via NavigationService');
+      NavigationService.goBack();
+    } else {
+      console.log('[Navigation] Voltando via Expo Router');
+      router.back();
+    }
+  } catch (error) {
+    console.error('[Navigation] Erro ao voltar:', error);
+    try {
+      router.back();
+    } catch (routerError) {
+      console.error('[Navigation] Também falhou com router.back:', routerError);
+      // Como último recurso, tenta navegar para a tela de produtos
+      router.push('/products');
+    }
+  }
 }
 
 export default function Register() {
@@ -149,7 +213,7 @@ export default function Register() {
           } else {
             console.error('Produto não encontrado:', params.productCode);
             Alert.alert('Erro', 'Produto não encontrado');
-            router.back();
+            safeGoBack();
           }
         } else {
           // Lógica para novo produto
@@ -494,7 +558,7 @@ export default function Register() {
               setOriginalProduct(null);
               
               // Redirecionar para a tela de produtos após editar
-              router.push('/products');
+              safeNavigate('/products');
             }}]
           );
         } else {
@@ -530,7 +594,7 @@ export default function Register() {
               setOriginalProduct(null);
               
               // Redirecionar para a tela de produtos após editar
-              router.push('/products');
+              safeNavigate('/products');
             }}]
           );
         }

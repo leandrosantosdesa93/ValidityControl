@@ -1,23 +1,35 @@
+import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
-import { useColorScheme } from '@hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
-import { View, Alert } from 'react-native';
+import { View, StatusBar as RNStatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NotificationInitializer } from '../src/components/NotificationInitializer';
-import { useState, useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from '../hooks/useColorScheme';
+import { ThemedView } from '../components/ThemedView';
+import { useProductStore } from '../src/store/productStore';
 import { UpdateModal } from '../src/components/UpdateModal';
+import NotificationInitializer from '../src/components/NotificationInitializer';
+import { navigationRef } from '../src/navigation/navigationService';
 import { checkAppVersion, saveVersionCheckTimestamp } from '../src/services/VersionService';
+import { Alert } from 'react-native';
 
 export default function AppLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const store = useProductStore();
   
-  const [updateInfo, setUpdateInfo] = useState({
+  // Log para depuração
+  useEffect(() => {
+    console.log('[AppLayout] Inicializando layout do Expo Router');
+    console.log('[AppLayout] Status navigationRef:', navigationRef.current ? 'disponível' : 'não disponível');
+  }, []);
+
+  // Verificar versão do app e mostrar modal se necessário
+  const [updateInfo, setUpdateInfo] = React.useState({
     showUpdateModal: false,
-    currentVersion: '',
-    requiredVersion: '',
-    downloadUrl: ''
+    currentVersion: '1.0.0',
+    requiredVersion: '1.0.0',
+    downloadUrl: '',
   });
 
   useEffect(() => {
@@ -106,7 +118,6 @@ export default function AppLayout() {
               borderBottomColor: isDark ? '#333' : '#e0e0e0',
               borderBottomWidth: 1,
               height: 80,
-              paddingTop: 20,
             },
             headerTitleStyle: {
               fontSize: 20,
@@ -117,13 +128,14 @@ export default function AppLayout() {
             tabBarLabelStyle: {
               fontSize: 12,
             },
+            headerSafeAreaInsets: { top: 20 },
           }}
         >
           <Tabs.Screen
             name="index"
             options={{
-              title: '',
-              headerShown: false,
+              title: 'Início',
+              headerTitle: 'Controle de Validade',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="home" size={size} color={color} />
               ),
@@ -131,66 +143,59 @@ export default function AppLayout() {
               href: '/',
             }}
           />
-
           <Tabs.Screen
             name="products"
             options={{
-              title: '',
-              headerShown: false,
+              title: 'Produtos',
+              headerTitle: 'Meus Produtos',
               tabBarIcon: ({ color, size }) => (
-                <Ionicons name="cube" size={size} color={color} />
+                <Ionicons name="list" size={size} color={color} />
               ),
               tabBarLabel: 'Produtos',
             }}
           />
-
           <Tabs.Screen
             name="register"
             options={{
-              title: '',
-              headerShown: false,
+              title: 'Cadastrar',
+              headerTitle: 'Novo Produto',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="add-circle" size={size} color={color} />
               ),
-              tabBarLabel: 'Cadastrar'
+              tabBarLabel: 'Cadastrar',
             }}
           />
-
           <Tabs.Screen
             name="expiring"
             options={{
-              title: '',
-              headerShown: false,
+              title: 'A Vencer',
+              headerTitle: 'Produtos a Vencer',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="warning" size={size} color={color} />
               ),
               tabBarLabel: 'A Vencer',
             }}
           />
-
           <Tabs.Screen
             name="expired"
             options={{
-              title: '',
-              headerShown: false,
+              title: 'Vencidos',
+              headerTitle: 'Produtos Vencidos',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="alert-circle" size={size} color={color} />
               ),
               tabBarLabel: 'Vencidos',
             }}
           />
-
           <Tabs.Screen
             name="settings"
             options={{
               title: 'Configurações',
+              headerTitle: 'Configurações',
               tabBarIcon: ({ color, size }) => (
                 <Ionicons name="settings" size={size} color={color} />
               ),
-              tabBarLabel: 'Configurações',
-              tabBarLabelStyle: {
-                fontSize: 12,
-              },
+              tabBarLabel: 'Ajustes',
             }}
           />
         </Tabs>
