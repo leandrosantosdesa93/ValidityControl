@@ -35,7 +35,8 @@
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
         "backgroundColor": "#00A1DF"
-      }
+      },
+      "bundleIdentifier": "com.validitycontrol.app"
     },
     "android": {
       "versionCode": 1,
@@ -82,6 +83,14 @@
         "unstable_allowRequireContext": true,
         "enableBabelRuntime": true,
         "enableBabelRuntimeHelpers": true
+      }
+    },
+    "builds": {
+      "android": {
+        "release": {
+          "workflow": "generic",
+          "buildType": "apk"
+        }
       }
     }
   }

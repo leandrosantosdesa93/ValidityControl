@@ -1,0 +1,15 @@
+# Arquivos que não precisam ser enviados para o EAS Build
+node_modules/
+.git/
+.expo/
+.vscode/
+.idea/
+*.log
+android/.gradle
+android/build
+android/app/build
+ios/build
+ios/Pods
+__tests__
+coverage/
+*.md 

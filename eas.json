@@ -11,8 +11,50 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest",
+        "withoutCredentials": false,
+        "env": {
+          "EXPO_SKIP_BUNDLER_VALIDATION": "1"
+        }
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.example.com",
+        "EAS_BUILD_RUNNER_TIMEOUT_MINUTES": "60",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1",
+        "METRO_MEMORY_MB": "4096"
+      },
+      "cache": {
+        "key": "new-metro-config-v2"
       }
+    },
+    "preview-apk-only": {
+      "extends": "preview",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "image": "latest",
+        "env": {
+          "EXPO_SKIP_BUNDLER_VALIDATION": "1"
+        }
+      },
+      "ios": {
+        "resourceClass": "m1-medium",
+        "simulator": true
+      }
+    },
+    "preview-local": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.example.com"
+      },
+      "channel": "preview"
     },
     "production": {
       "android": {
