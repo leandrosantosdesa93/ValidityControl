@@ -22,8 +22,7 @@
           "cameraPermission": "O Validity Control precisa acessar a câmera para tirar fotos dos produtos.",
           "androidPermissionText": "O Validity Control precisa da sua permissão para acessar a câmera e fotos"
         }
-      ],
-      "expo-notifications"
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -53,11 +52,7 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.POST_NOTIFICATIONS",
-        "android.permission.VIBRATE"
+        "android.permission.RECORD_AUDIO"
       ],
       "package": "com.validitycontrol.app"
     },

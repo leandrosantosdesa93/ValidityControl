@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { View } from 'react-native';
-import { useProductStore } from './src/store/productStore';
 import { ActivityIndicator } from 'react-native-paper';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';

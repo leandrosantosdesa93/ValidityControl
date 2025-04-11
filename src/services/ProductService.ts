@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '@/types/Product';
 import { eventEmitter, PRODUCT_EVENTS } from '@/services/EventEmitter';
-import { cancelProductNotifications } from '@/services/notifications';
 
 const STORAGE_KEY = '@ValidityControl:products';
 
@@ -140,14 +139,6 @@ export async function markProductAsSold(code: string): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(products));
     console.log('[ProductService] Produto atualizado, emitindo evento');
     eventEmitter.emit(PRODUCT_EVENTS.UPDATED);
-    
-    // Cancelar notificações para este produto
-    try {
-      await cancelProductNotifications(code);
-      console.log('[ProductService] Notificações canceladas para produto vendido:', code);
-    } catch (error) {
-      console.error('[ProductService] Erro ao cancelar notificações do produto vendido:', error);
-    }
   } else {
     console.warn('[ProductService] Produto não encontrado para marcação como vendido:', code);
   }

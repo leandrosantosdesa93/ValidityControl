@@ -1,6 +1,7 @@
 export const ROUTES = {
-  PRODUCT_LIST: 'ProductList',
-  ADD_PRODUCT: 'AddProduct',
-  EXPIRING_PRODUCTS: 'ExpiringProducts',
-  EXPIRED_PRODUCTS: 'ExpiredProducts',
+  HOME: 'Home',
+  PRODUCTS: 'Products',
+  REGISTER: 'Register',
+  EXPIRING: 'Expiring',
+  EXPIRED: 'Expired',
 } as const; 
