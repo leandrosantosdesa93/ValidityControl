@@ -1,14 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions, Pressable, Text, RefreshControl } from 'react-native';
+import { StyleSheet, View, ScrollView, Dimensions, Pressable, RefreshControl } from 'react-native';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
 import { useColorScheme } from '../hooks/useColorScheme';
-import { useProductStore } from '../src/store/productStore';
 import { getProducts } from '../src/services/ProductService';
 import { Product } from '../src/types/Product';
 import { Ionicons } from '@expo/vector-icons';
 import { differenceInDays, format, startOfDay, addDays, isBefore, isAfter, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { router, useFocusEffect } from 'expo-router';
 import { eventEmitter, PRODUCT_EVENTS } from '../src/services/EventEmitter';
 import Svg, { Circle, Line, Rect } from 'react-native-svg';
@@ -169,34 +167,30 @@ function SimpleDonutChart({ data, size, isDark }: DonutChartProps) {
   );
 }
 
+// Tipo para as rotas válidas
+type AppRoutes = '/products' | '/expiring' | '/expired' | '/register';
+
 // Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
-function safeNavigate(route: string, params?: any) {
+function safeNavigate(route: AppRoutes, params?: any) {
   try {
     // Tenta usar o NavigationService primeiro
     if (NavigationService.isReady()) {
       console.log(`[Navigation] Navegando para ${route} via NavigationService`);
       // Converte entre nomes de rotas se necessário
-      let navRoute = route;
-      if (route === '/products') navRoute = 'Products';
-      if (route === '/expiring') navRoute = 'Expiring';
-      if (route === '/expired') navRoute = 'Expired';
+      let navRoute = route.replace('/', '') as 'Products' | 'Expiring' | 'Expired' | 'Add';
       if (route === '/register') navRoute = 'Add';
       
-      NavigationService.navigate(navRoute as any, params);
+      NavigationService.navigate(navRoute, params);
     } else {
       // Fallback para o router do Expo
       console.log(`[Navigation] Navegando para ${route} via Expo Router`);
-      if (typeof route === 'string' && route.startsWith('/')) {
-        router.push(route);
-      } else {
-        router.push(`/${route}`);
-      }
+      router.push(route as '/products' | '/expiring' | '/expired' | '/register');
     }
   } catch (error) {
     console.error('[Navigation] Erro ao navegar:', error);
     // Se falhar, tenta o router do Expo como última opção
     try {
-      router.push(typeof route === 'string' && route.startsWith('/') ? route : `/${route}`);
+      router.push(route as '/products' | '/expiring' | '/expired' | '/register');
     } catch (routerError) {
       console.error('[Navigation] Também falhou com router:', routerError);
     }
@@ -206,7 +200,6 @@ function safeNavigate(route: string, params?: any) {
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const store = useProductStore();
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,

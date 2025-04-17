@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, TextInput, View, Image, Pressable, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '../components/ThemedView';
@@ -6,54 +6,13 @@ import { ThemedText } from '../components/ThemedText';
 import { Product } from '../src/types/Product';
 import { format, startOfDay, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { getProducts, updateProduct, deleteProduct } from '../src/services/ProductService';
+import { getProducts, deleteProduct } from '../src/services/ProductService';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { eventEmitter, PRODUCT_EVENTS } from '../src/services/EventEmitter';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { printToFileAsync } from 'expo-print';
 import { NavigationService } from '../src/navigation/navigationService';
-
-// Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
-function safeNavigate(route: string | object, params?: any) {
-  try {
-    // Tenta usar o NavigationService primeiro
-    if (NavigationService.isReady()) {
-      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via NavigationService`);
-      
-      // Se for um objeto (como um href do Expo Router), extraímos o caminho
-      if (typeof route === 'object' && (route as any).pathname) {
-        const routeObj = route as any;
-        let navRoute = routeObj.pathname;
-        
-        // Conversão de rotas
-        if (navRoute === '/register') {
-          NavigationService.navigate('Add', routeObj.params || params);
-        } else {
-          NavigationService.navigate(navRoute as any, routeObj.params || params);
-        }
-      } else if (typeof route === 'string') {
-        // Converte entre nomes de rotas se necessário
-        let navRoute = route;
-        if (route === '/register') navRoute = 'Add';
-        
-        NavigationService.navigate(navRoute as any, params);
-      }
-    } else {
-      // Fallback para o router do Expo
-      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via Expo Router`);
-      router.push(route as any);
-    }
-  } catch (error) {
-    console.error('[Navigation] Erro ao navegar:', error);
-    // Se falhar, tenta o router do Expo como última opção
-    try {
-      router.push(route as any);
-    } catch (routerError) {
-      console.error('[Navigation] Também falhou com router:', routerError);
-    }
-  }
-}
 
 export default function ProductListScreen() {
   const colorScheme = useColorScheme();
@@ -67,37 +26,15 @@ export default function ProductListScreen() {
   const [isShareSelectionMode, setIsShareSelectionMode] = useState(false);
 
   // Utility functions
-  function isProductExpired(product: Product): boolean {
-    const today = startOfDay(new Date());
-    const expirationDate = startOfDay(new Date(product.expirationDate));
-    return differenceInDays(expirationDate, today) < 0;
-  }
-
-  function getDaysUntilExpiration(expirationDate: Date): number {
-    const today = startOfDay(new Date());
-    const expDate = startOfDay(new Date(expirationDate));
-    return differenceInDays(expDate, today);
-  }
-
-  useEffect(() => {
-    loadProducts();
-    const unsubscribe = eventEmitter.subscribe(PRODUCT_EVENTS.UPDATED, loadProducts);
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    filterAndSortProducts();
-  }, [searchQuery, products]);
-
-  function sortProductsByExpiration(productsToSort: Product[]) {
+  const sortProductsByExpiration = useCallback((productsToSort: Product[]) => {
     return [...productsToSort].sort((a, b) => {
       const dateA = new Date(a.expirationDate);
       const dateB = new Date(b.expirationDate);
       return dateB.getTime() - dateA.getTime();
     });
-  }
+  }, []);
 
-  function filterAndSortProducts() {
+  const filterAndSortProducts = useCallback(() => {
     let filtered = products;
     
     if (searchQuery.trim()) {
@@ -127,9 +64,9 @@ export default function ProductListScreen() {
     // Ordena os produtos por data de vencimento
     const sorted = sortProductsByExpiration(filtered);
     setFilteredProducts(sorted);
-  }
+  }, [products, searchQuery, sortProductsByExpiration]);
 
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await getProducts();
@@ -141,47 +78,47 @@ export default function ProductListScreen() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [sortProductsByExpiration]);
 
-  async function handleDeleteProduct(product: Product) {
-    Alert.alert(
-      'Confirmar Exclusão',
-      `Deseja realmente excluir o produto "${product.description}"?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel'
-        },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteProduct(product.code);
-            } catch (error) {
-              Alert.alert('Erro', 'Não foi possível excluir o produto');
-            }
-          }
-        }
-      ]
-    );
-  }
+  useEffect(() => {
+    loadProducts();
+    const unsubscribe = eventEmitter.subscribe(PRODUCT_EVENTS.UPDATED, loadProducts);
+    return () => unsubscribe();
+  }, [loadProducts]);
 
-  async function handleEditProduct(product: Product) {
+  useEffect(() => {
+    filterAndSortProducts();
+  }, [filterAndSortProducts]);
+
+  const handleEditProduct = useCallback(async (product: Product) => {
     console.log('[ProductsScreen] Editando produto:', product.code);
     
     // Usar timestamp para forçar recarregamento
     const timestamp = new Date().getTime();
     console.log('[ProductsScreen] Timestamp para navegação:', timestamp);
     
-    safeNavigate({
-      pathname: '/register',
-      params: { 
-        productCode: product.code,
-        timestamp: timestamp.toString() // Garantir que é string e que muda a cada navegação
+    const navigationParams = {
+      productId: product.code,
+      timestamp: timestamp.toString()
+    };
+    
+    try {
+      if (NavigationService.isReady()) {
+        NavigationService.navigate('Add', navigationParams);
+      } else {
+        router.push({
+          pathname: '/register',
+          params: navigationParams
+        });
       }
-    });
-  }
+    } catch (error) {
+      console.error('[Navigation] Erro ao navegar:', error);
+      router.push({
+        pathname: '/register',
+        params: navigationParams
+      });
+    }
+  }, []);
 
   function handleLongPress(code: string) {
     setIsSelectionMode(true);
@@ -204,6 +141,30 @@ export default function ProductListScreen() {
     }
   }
 
+  async function handleDeleteProduct(product: Product) {
+    Alert.alert(
+      'Confirmar Exclusão',
+      `Deseja realmente excluir o produto "${product.description}"?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteProduct(product.code);
+            } catch {
+              Alert.alert('Erro', 'Não foi possível excluir o produto');
+            }
+          }
+        }
+      ]
+    );
+  }
+
   async function handleDeleteSelected() {
     Alert.alert(
       'Confirmar Exclusão',
@@ -223,7 +184,7 @@ export default function ProductListScreen() {
               }
               setIsSelectionMode(false);
               setSelectedProducts(new Set());
-            } catch (error) {
+            } catch {
               Alert.alert('Erro', 'Não foi possível excluir os produtos');
             }
           }

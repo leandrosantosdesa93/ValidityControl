@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,11 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Ionicons } from '@expo/vector-icons';
 import { saveProduct, updateProduct, getProducts, deleteProduct } from '@/services/ProductService';
 import { useColorScheme } from '@hooks/useColorScheme';
-import { ThemedView } from '@components/ThemedView';
 import { ThemedText } from '@components/ThemedText';
 import { Product } from '@/types/Product';
 import { NavigationService } from '@/navigation/navigationService';
@@ -231,7 +230,7 @@ export default function Register() {
     
     // Incrementar a chave de atualização para forçar recarregamento em futuras edições
     setRefreshKey(prev => prev + 1);
-  }, [params.productCode, params.timestamp, resetForm]);
+  }, [params.productCode, params.timestamp, resetForm, refreshKey]);
   
   // Função para validar o formulário
   const validateForm = (): boolean => {
@@ -713,7 +712,6 @@ export default function Register() {
     
     // Limpar os últimos dígitos do código (assegura que este campo está sendo limpo)
     setLastFourDigits('');
-    console.log('[Register] Campo de código limpo:', lastFourDigits);
     
     // Fechar qualquer datepicker aberto
     setShowDatePicker(false);
@@ -889,11 +887,7 @@ export default function Register() {
                 placeholder="0000"
                 placeholderTextColor={isDark ? '#888' : '#999'}
                 value={lastFourDigits}
-                onChangeText={(text) => {
-                  // Permitir apenas números
-                  const digitsOnly = text.replace(/[^0-9]/g, '');
-                  setLastFourDigits(digitsOnly);
-                }}
+                onChangeText={handleCodeChange}
                 keyboardType="numeric"
                 maxLength={4}
                 onEndEditing={() => checkExistingCode(lastFourDigits)}

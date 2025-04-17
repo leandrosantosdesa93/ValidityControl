@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, FlatList, View, Image, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { ThemedView } from '@components/ThemedView';
 import { ThemedText } from '@components/ThemedText';
@@ -9,7 +9,6 @@ import { getProducts, deleteProduct } from '@/services/ProductService';
 import { useColorScheme } from '@hooks/useColorScheme';
 import { eventEmitter, PRODUCT_EVENTS } from '@/services/EventEmitter';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { printToFileAsync } from 'expo-print';
 
@@ -22,50 +21,8 @@ export default function ExpiringScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  const [isShareSelectionMode, setIsShareSelectionMode] = useState(false);
 
-  useEffect(() => {
-    loadProducts();
-    const unsubscribe = eventEmitter.subscribe(PRODUCT_EVENTS.UPDATED, loadProducts);
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    filterProducts();
-  }, [products, activeFilter]);
-
-  function filterProducts() {
-    if (activeFilter === 'all') {
-      setFilteredProducts(products);
-      return;
-    }
-
-    const filtered = products.filter(product => {
-      const daysUntil = getDaysUntilExpiration(product.expirationDate);
-      switch (activeFilter) {
-        case 'today':
-          return daysUntil === 0;
-        case 'tomorrow':
-          return daysUntil === 1;
-        case '2-3':
-          return daysUntil <= 3 && daysUntil > 1;
-        case '4-5':
-          return daysUntil <= 5 && daysUntil > 3;
-        default:
-          return true;
-      }
-    });
-
-    setFilteredProducts(filtered);
-  }
-
-  function getDaysUntilExpiration(expirationDate: Date) {
-    const today = startOfDay(new Date());
-    const expiration = startOfDay(new Date(expirationDate));
-    return differenceInDays(expiration, today);
-  }
-
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const allProducts = await getProducts();
@@ -88,6 +45,47 @@ export default function ExpiringScreen() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    loadProducts();
+    const unsubscribe = eventEmitter.subscribe(PRODUCT_EVENTS.UPDATED, loadProducts);
+    return () => unsubscribe();
+  }, [loadProducts]);
+
+  const filterProducts = useCallback(() => {
+    if (activeFilter === 'all') {
+      setFilteredProducts(products);
+      return;
+    }
+
+    const filtered = products.filter(product => {
+      const daysUntil = getDaysUntilExpiration(product.expirationDate);
+      switch (activeFilter) {
+        case 'today':
+          return daysUntil === 0;
+        case 'tomorrow':
+          return daysUntil === 1;
+        case '2-3':
+          return daysUntil <= 3 && daysUntil > 1;
+        case '4-5':
+          return daysUntil <= 5 && daysUntil > 3;
+        default:
+          return true;
+      }
+    });
+
+    setFilteredProducts(filtered);
+  }, [products, activeFilter]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [filterProducts]);
+
+  function getDaysUntilExpiration(expirationDate: Date) {
+    const today = startOfDay(new Date());
+    const expiration = startOfDay(new Date(expirationDate));
+    return differenceInDays(expiration, today);
   }
 
   function getExpirationInfo(date: Date) {
@@ -127,7 +125,6 @@ export default function ExpiringScreen() {
 
   function handleLongPress(code: string) {
     setIsSelectionMode(true);
-    setIsShareSelectionMode(false);
     setSelectedProducts(new Set([code]));
   }
 
@@ -138,7 +135,6 @@ export default function ExpiringScreen() {
         newSelected.delete(code);
         if (newSelected.size === 0) {
           setIsSelectionMode(false);
-          setIsShareSelectionMode(false);
         }
       } else {
         newSelected.add(code);
@@ -188,11 +184,9 @@ export default function ExpiringScreen() {
       }
       setSelectedProducts(new Set());
       setIsSelectionMode(false);
-      setIsShareSelectionMode(false);
     } else {
       // No modo normal, ativa o modo de seleção e seleciona todos os produtos
       setIsSelectionMode(true);
-      setIsShareSelectionMode(true);
       setSelectedProducts(new Set(filteredProducts.map(p => p.code)));
     }
   }
@@ -402,7 +396,6 @@ export default function ExpiringScreen() {
                   onPress={() => {
                     setIsSelectionMode(false);
                     setSelectedProducts(new Set());
-                    setIsShareSelectionMode(false);
                   }}
                 >
                   <Ionicons name="close" size={24} color={isDark ? '#fff' : '#000'} />

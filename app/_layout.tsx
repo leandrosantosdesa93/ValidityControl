@@ -1,18 +1,14 @@
 import React, { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from '../hooks/useColorScheme';
-import { ThemedView } from '../components/ThemedView';
-import { useProductStore } from '../src/store/productStore';
 import { navigationRef } from '../src/navigation/navigationService';
 
 export default function AppLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const store = useProductStore();
   
   // Log para depuração
   useEffect(() => {
@@ -40,6 +36,7 @@ export default function AppLayout() {
             borderBottomColor: isDark ? '#333' : '#e0e0e0',
             borderBottomWidth: 1,
             height: 80,
+            paddingTop: 20,
           },
           headerTitleStyle: {
             fontSize: 20,
@@ -50,7 +47,6 @@ export default function AppLayout() {
           tabBarLabelStyle: {
             fontSize: 12,
           },
-          headerSafeAreaInsets: { top: 20 },
         }}
       >
         <Tabs.Screen

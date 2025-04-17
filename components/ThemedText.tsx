@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, TextStyle } from 'react-native';
 import { useColorScheme } from '@hooks/useColorScheme';
 
 type ThemedTextProps = Text['props'] & {
@@ -9,7 +9,7 @@ export function ThemedText({ style, type = 'body', ...props }: ThemedTextProps) 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const getTextStyle = () => {
+  const getTextStyle = (): TextStyle => {
     switch (type) {
       case 'title':
         return {
@@ -19,7 +19,7 @@ export function ThemedText({ style, type = 'body', ...props }: ThemedTextProps) 
       case 'subtitle':
         return {
           fontSize: 18,
-          fontWeight: '600',
+          fontWeight: '600' as TextStyle['fontWeight'],
         };
       case 'caption':
         return {
@@ -29,7 +29,7 @@ export function ThemedText({ style, type = 'body', ...props }: ThemedTextProps) 
       case 'defaultSemiBold':
         return {
           fontSize: 16,
-          fontWeight: '600',
+          fontWeight: '600' as TextStyle['fontWeight'],
         };
       case 'link':
         return {

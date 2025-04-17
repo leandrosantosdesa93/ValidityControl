@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, FlatList, View, Image, Pressable, Alert, ActivityIndicator, RefreshControl, TouchableOpacity, Share } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, FlatList, View, Image, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { ThemedView } from '../components/ThemedView';
 import { ThemedText } from '../components/ThemedText';
 import { Product } from '../src/types/Product';
@@ -9,51 +9,8 @@ import { getProducts, deleteProduct } from '../src/services/ProductService';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { eventEmitter, PRODUCT_EVENTS } from '../src/services/EventEmitter';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { printToFileAsync } from 'expo-print';
-import { NavigationService } from '../src/navigation/navigationService';
-
-// Função que tenta fazer a navegação de maneira segura com fallback para o router do Expo
-function safeNavigate(route: string | object, params?: any) {
-  try {
-    // Tenta usar o NavigationService primeiro
-    if (NavigationService.isReady()) {
-      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via NavigationService`);
-      
-      // Se for um objeto (como um href do Expo Router), extraímos o caminho
-      if (typeof route === 'object' && (route as any).pathname) {
-        const routeObj = route as any;
-        let navRoute = routeObj.pathname;
-        
-        // Conversão de rotas
-        if (navRoute === '/register') {
-          NavigationService.navigate('Add', routeObj.params || params);
-        } else {
-          NavigationService.navigate(navRoute as any, routeObj.params || params);
-        }
-      } else if (typeof route === 'string') {
-        // Converte entre nomes de rotas se necessário
-        let navRoute = route;
-        if (route === '/register') navRoute = 'Add';
-        
-        NavigationService.navigate(navRoute as any, params);
-      }
-    } else {
-      // Fallback para o router do Expo
-      console.log(`[Navigation] Navegando para ${typeof route === 'string' ? route : 'objeto'} via Expo Router`);
-      router.push(route as any);
-    }
-  } catch (error) {
-    console.error('[Navigation] Erro ao navegar:', error);
-    // Se falhar, tenta o router do Expo como última opção
-    try {
-      router.push(route as any);
-    } catch (routerError) {
-      console.error('[Navigation] Também falhou com router:', routerError);
-    }
-  }
-}
 
 export default function ExpiredScreen() {
   const colorScheme = useColorScheme();
@@ -64,7 +21,6 @@ export default function ExpiredScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  const [isShareSelectionMode, setIsShareSelectionMode] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -72,11 +28,7 @@ export default function ExpiredScreen() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    filterProducts();
-  }, [products, activeFilter]);
-
-  function filterProducts() {
+  const filterProducts = useCallback(() => {
     const filtered = products.filter(product => {
       const daysExpired = getDaysExpired(product.expirationDate);
       switch (activeFilter) {
@@ -91,7 +43,11 @@ export default function ExpiredScreen() {
     });
 
     setFilteredProducts(filtered);
-  }
+  }, [products, activeFilter]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [filterProducts]);
 
   function getDaysExpired(expirationDate: Date) {
     const today = startOfDay(new Date());
@@ -148,29 +104,25 @@ export default function ExpiredScreen() {
       return {
         color: '#8B0000', // Dark Red
         icon: 'alert-circle-outline' as const,
-        label: 'Crítico',
-        textColor: '#FF4444'
+        label: 'Crítico'
       };
     }
     if (daysExpired > 15) {
       return {
         color: '#B22222', // Fire Brick
         icon: 'warning-outline' as const,
-        label: 'Grave',
-        textColor: '#FF6B6B'
+        label: 'Grave'
       };
     }
     return {
       color: '#CD5C5C', // Indian Red
       icon: 'information-circle-outline' as const,
-      label: 'Vencido',
-      textColor: '#FF8888'
+      label: 'Vencido'
     };
   }
 
   function handleLongPress(code: string) {
     setIsSelectionMode(true);
-    setIsShareSelectionMode(false);
     setSelectedProducts(new Set([code]));
   }
 
@@ -181,7 +133,6 @@ export default function ExpiredScreen() {
         newSelected.delete(code);
         if (newSelected.size === 0) {
           setIsSelectionMode(false);
-          setIsShareSelectionMode(false);
         }
       } else {
         newSelected.add(code);
@@ -231,11 +182,9 @@ export default function ExpiredScreen() {
       }
       setSelectedProducts(new Set());
       setIsSelectionMode(false);
-      setIsShareSelectionMode(false);
     } else {
       // No modo normal, ativa o modo de seleção e seleciona todos os produtos
       setIsSelectionMode(true);
-      setIsShareSelectionMode(true);
       setSelectedProducts(new Set(filteredProducts.map(p => p.code)));
     }
   }
@@ -275,7 +224,7 @@ export default function ExpiredScreen() {
   }
 
   function renderProduct({ item }: { item: Product }) {
-    const { color, icon, label, textColor } = getExpirationInfo(item.expirationDate);
+    const { color, icon, label } = getExpirationInfo(item.expirationDate);
     const daysExpired = getDaysExpired(item.expirationDate);
     const isSelected = selectedProducts.has(item.code);
 
@@ -417,7 +366,6 @@ export default function ExpiredScreen() {
                   onPress={() => {
                     setIsSelectionMode(false);
                     setSelectedProducts(new Set());
-                    setIsShareSelectionMode(false);
                   }}
                 >
                   <Ionicons name="close" size={24} color={isDark ? '#fff' : '#000'} />

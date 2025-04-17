@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { eventEmitter, PRODUCT_EVENTS } from './EventEmitter';
 
@@ -104,16 +103,12 @@ export async function saveProduct(formData: ProductFormData): Promise<Product> {
     
     // Extrair componentes da data diretamente para evitar problemas de fuso horário
     let expirationDateString: string;
-    if (formData.expirationDate instanceof Date) {
-      const date = new Date(formData.expirationDate);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      expirationDateString = `${year}-${month}-${day}`;
-      console.log('[ProductService] Data de validade convertida:', expirationDateString);
-    } else {
-      expirationDateString = formData.expirationDate.toString();
-    }
+    const date = new Date(formData.expirationDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    expirationDateString = `${year}-${month}-${day}`;
+    console.log('[ProductService] Data de validade convertida:', expirationDateString);
     
     // Determinar o código do produto
     let productCode = formData.code;
@@ -257,17 +252,26 @@ export async function updateProduct(product: Product): Promise<void> {
     
     if (index >= 0) {
       // Garantir que expirationDate seja string no formato correto
-      let expirationDateString: string = product.expirationDate as string;
+      let expirationDateString: string;
       
-      if (product.expirationDate instanceof Date) {
-        // Criar uma data com UTC para evitar problemas de fuso horário
+      try {
+        // Tentar converter para Date se for uma string
         const date = new Date(product.expirationDate);
-        // Extrair os componentes da data diretamente para evitar problemas de fuso horário
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        expirationDateString = `${year}-${month}-${day}`;
-        console.log('[ProductService] Data convertida:', expirationDateString);
+        if (!isNaN(date.getTime())) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          expirationDateString = `${year}-${month}-${day}`;
+          console.log('[ProductService] Data convertida:', expirationDateString);
+        } else {
+          // Se não for uma data válida, usar a string original
+          expirationDateString = product.expirationDate;
+          console.log('[ProductService] Usando data original:', expirationDateString);
+        }
+      } catch (error) {
+        // Em caso de erro, usar a string original
+        expirationDateString = product.expirationDate;
+        console.log('[ProductService] Erro ao converter data, usando original:', expirationDateString);
       }
       
       storage.products[index] = {
@@ -383,7 +387,7 @@ export async function markAsSold(code: string): Promise<void> {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedStorage));
     
     // Emitir evento de produto atualizado
-    eventEmitter.emit(PRODUCT_EVENTS.UPDATED, { action: 'sold', productCode: code });
+    eventEmitter.emit(PRODUCT_EVENTS.UPDATED);
     
     console.log(`[ProductService] Produto ${code} marcado como vendido e removido com sucesso`);
   } catch (error) {

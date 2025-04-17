@@ -44,17 +44,6 @@ export function ShareProducts({ isVisible, onClose, products, screenName }: Shar
     return 'REGULAR';
   };
 
-  const getDaysInfo = (product: Product): string => {
-    const today = startOfDay(new Date());
-    const expirationDate = startOfDay(new Date(product.expirationDate));
-    const daysToExpiry = differenceInDays(expirationDate, today);
-
-    if (daysToExpiry < 0) return `Vencido há ${Math.abs(daysToExpiry)} dias`;
-    if (daysToExpiry === 0) return 'Vence hoje';
-    if (daysToExpiry === 1) return 'Vence amanhã';
-    return `Vence em ${daysToExpiry} dias`;
-  };
-
   const toggleProduct = (code: string) => {
     const newSelected = new Set(selectedProducts);
     if (newSelected.has(code)) {

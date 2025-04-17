@@ -6,12 +6,15 @@ import { ThemedText } from './ThemedText';
 export function HelloWave() {
   const rotation = useSharedValue(0);
 
+  // We intentionally omit 'rotation' from deps as it's a Reanimated shared value
+  // and we only want to set up the animation once
   useEffect(() => {
     rotation.value = withRepeat(
       withTiming(1, { duration: 1000 }),
       -1,
       true
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({

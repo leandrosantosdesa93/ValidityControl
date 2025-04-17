@@ -5,7 +5,7 @@ import { ThemedText } from './ThemedText';
 
 interface EmptyProductListProps {
   message: string;
-  icon?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
   isDark: boolean;
 }
 
