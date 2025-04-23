@@ -32,6 +32,7 @@ export async function saveProduct(formData: ProductFormData): Promise<Product> {
       code: formData.code ? (formData.code.startsWith('PROD-') ? formData.code : `PROD-${formData.code}`) : generateProductCode(),
       createdAt: new Date(),
       isFavorite: false,
+      isSold: false,
     };
     
     console.log('[ProductService] Novo produto criado:', JSON.stringify(newProduct, null, 2));

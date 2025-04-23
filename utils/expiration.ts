@@ -46,7 +46,7 @@ export function getExpirationInfo(expirationDate: Date): ExpirationInfo {
  * @param products Lista de produtos
  * @returns Objeto com contagem por mês
  */
-export function getMonthlyExpirationData(products: Array<{ expirationDate: Date }>) {
+export function getMonthlyExpirationData(products: { expirationDate: Date }[]) {
   const monthlyData: Record<string, number> = {};
   
   products.forEach(product => {
@@ -68,7 +68,7 @@ export function getMonthlyExpirationData(products: Array<{ expirationDate: Date 
  * @param products Lista de produtos
  * @returns Estatísticas de produtos expirados, a vencer e válidos
  */
-export function getExpirationStats(products: Array<{ expirationDate: Date }>) {
+export function getExpirationStats(products: { expirationDate: Date }[]) {
   let expired = 0;
   let expiring = 0;
   let valid = 0;

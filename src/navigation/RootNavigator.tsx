@@ -1,8 +1,8 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AppNavigator } from './AppNavigator';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export function RootNavigator() {
   console.log('[RootNavigator] Inicializando com Stack.Navigator');
@@ -11,7 +11,7 @@ export function RootNavigator() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: 'transparent' },
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     >
       <Stack.Screen

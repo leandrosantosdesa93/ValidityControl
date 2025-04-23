@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { ProductCard } from '../components/ProductCard';
-import { addDays, subDays } from 'date-fns';
 
 // Mock para funções de expiração
 const mockGetExpirationInfo = (date: Date) => {
@@ -25,9 +24,11 @@ describe('ProductCard', () => {
     description: 'Produto de teste',
     quantity: 10,
     expirationDate: new Date(),
-    photoUri: null,
+    photoUri: undefined,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    isFavorite: false,
+    isSold: false
   };
   
   const mockOnPress = jest.fn();

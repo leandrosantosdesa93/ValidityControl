@@ -14,8 +14,8 @@ export type TabIconName = Extract<IconName,
   | 'warning-outline'
   | 'alert-circle'
   | 'alert-circle-outline'
-  | 'help'
-  | 'cog'
+  | 'home'
+  | 'home-outline'
 >;
 
 // Tipos unificados para navegação
@@ -34,7 +34,10 @@ export type RootStackParamList = {
 
 export type RootTabParamList = {
   Home: undefined;
-  Settings: undefined;
+  Products: undefined;
+  Register: undefined;
+  Expiring: undefined;
+  Expired: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> = NativeStackScreenProps<

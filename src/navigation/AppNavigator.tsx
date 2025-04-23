@@ -2,12 +2,13 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
-import ProductsScreen from '../screens/ProductsScreen';
+import { ProductListScreen } from '../screens/ProductListScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ExpiringScreen from '../screens/ExpiringScreen';
 import ExpiredScreen from '../screens/ExpiredScreen';
+import { RootTabParamList } from '../types/navigation';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<RootTabParamList>();
 
 export function AppNavigator() {
   return (
@@ -45,7 +46,7 @@ export function AppNavigator() {
       />
       <Tab.Screen 
         name="Products" 
-        component={ProductsScreen}
+        component={ProductListScreen}
         options={{
           title: 'Produtos',
           headerTitle: 'Meus Produtos'

@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
 import { useProductStore } from '../store/productStore';
 import { RootTabScreenProps } from '../types/navigation';
 import { eventEmitter, PRODUCT_EVENTS } from '../services/EventEmitter';
 
-export default function HomeScreen({ navigation }: RootTabScreenProps<'Home'>) {
+export default function HomeScreen({ navigation: _navigation }: RootTabScreenProps<'Home'>) {
   const { products } = useProductStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   

@@ -5,12 +5,16 @@ module.exports = {
   settings: {
     'import/resolver': {
       typescript: {
-        project: './tsconfig.json',
+        project: ['./tsconfig.json', './app-example/tsconfig.json']
       },
       node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        moduleDirectory: ['node_modules', 'src/'],
-      },
-    },
+        paths: ['src', 'app-example'],
+        extensions: ['.js', '.jsx', '.ts', '.tsx']
+      }
+    }
   },
+  rules: {
+    'import/no-unresolved': 'error',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
+  }
 };

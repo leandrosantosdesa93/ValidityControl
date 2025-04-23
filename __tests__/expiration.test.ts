@@ -76,7 +76,7 @@ describe('Funções de expiração', () => {
     });
     
     test('deve lidar com uma lista vazia', () => {
-      const products: Array<{ expirationDate: Date }> = [];
+      const products: { expirationDate: Date }[] = [];
       const stats = getExpirationStats(products);
       
       expect(stats.expired).toBe(0);
@@ -105,7 +105,7 @@ describe('Funções de expiração', () => {
     });
     
     test('deve lidar com uma lista vazia', () => {
-      const products: Array<{ expirationDate: Date }> = [];
+      const products: { expirationDate: Date }[] = [];
       const monthlyData = getMonthlyExpirationData(products);
       
       expect(Object.keys(monthlyData).length).toBe(0);

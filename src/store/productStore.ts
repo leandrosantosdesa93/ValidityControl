@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '@/types/Product';
-import { differenceInDays, isAfter, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
+import { isAfter, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
 
 interface ProductState {
   products: Product[];
@@ -144,20 +144,24 @@ export const useProductStore = create<ProductState>()(
       onRehydrateStorage: () => (state) => {
         try {
           // Validação e conversão dos produtos
-          if (Array.isArray(state.products)) {
+          if (state && Array.isArray(state.products)) {
             state.products = state.products.map(product => ({
               ...product,
-              expirationDate: product.expirationDate ? new Date(product.expirationDate) : null,
+              expirationDate: product.expirationDate ? new Date(product.expirationDate) : new Date(),
               createdAt: product.createdAt ? new Date(product.createdAt) : new Date(),
               updatedAt: product.updatedAt ? new Date(product.updatedAt) : new Date()
             }));
           } else {
-            console.error('[Store] Estado inválido para produtos:', state.products);
-            state.products = [];
+            console.error('[Store] Estado inválido para produtos:', state?.products);
+            if (state) {
+              state.products = [];
+            }
           }
         } catch (error) {
           console.error('[Store] Erro ao recarregar estado:', error);
-          state.products = [];
+          if (state) {
+            state.products = [];
+          }
         }
       },
     }

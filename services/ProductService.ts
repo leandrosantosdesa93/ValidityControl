@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ptBR } from 'date-fns/locale';
 import { eventEmitter, PRODUCT_EVENTS } from './EventEmitter';
 
 // Chave para armazenamento dos produtos
@@ -81,8 +80,8 @@ export async function saveProduct(formData: ProductFormData): Promise<Product> {
       } else {
         console.log('[ProductService] Nenhum dado existente. Criando novo storage.');
       }
-    } catch (error) {
-      console.error('[ProductService] Erro ao ler produtos existentes:', error);
+    } catch (_error) {
+      console.error('[ProductService] Erro ao ler produtos existentes:', _error);
       // Continue com um storage vazio se não conseguir ler
       storage = { products: [], hasProducts: false };
       console.log('[ProductService] Usando storage vazio devido a erro.');
@@ -181,9 +180,9 @@ export async function saveProduct(formData: ProductFormData): Promise<Product> {
     }
     
     return product;
-  } catch (error) {
-    console.error('[ProductService] Erro ao salvar produto:', error);
-    throw new Error(`Falha ao salvar produto: ${error instanceof Error ? error.message : String(error)}`);
+  } catch (_error) {
+    console.error('[ProductService] Erro ao salvar produto:', _error);
+    throw new Error(`Falha ao salvar produto: ${_error instanceof Error ? _error.message : String(_error)}`);
   }
 }
 
@@ -222,8 +221,8 @@ export async function getProducts(): Promise<Product[]> {
     }
     
     return products;
-  } catch (error) {
-    console.error('[ProductService] Erro ao buscar produtos:', error);
+  } catch (_error) {
+    console.error('[ProductService] Erro ao buscar produtos:', _error);
     return [];
   }
 }
@@ -271,7 +270,7 @@ export async function updateProduct(product: Product): Promise<void> {
       } catch (error) {
         // Em caso de erro, usar a string original
         expirationDateString = product.expirationDate;
-        console.log('[ProductService] Erro ao converter data, usando original:', expirationDateString);
+        console.log('[ProductService] Erro ao converter data, usando original:', expirationDateString, 'Erro:', error);
       }
       
       storage.products[index] = {
@@ -295,9 +294,9 @@ export async function updateProduct(product: Product): Promise<void> {
     } else {
       console.warn('[ProductService] Produto não encontrado para atualização:', product.code);
     }
-  } catch (error) {
-    console.error('[ProductService] Erro ao atualizar produto:', error);
-    throw new Error('Falha ao atualizar produto');
+  } catch (_error) {
+    console.error('[ProductService] Erro ao atualizar produto:', _error);
+    throw new Error(`Falha ao atualizar produto: ${_error instanceof Error ? _error.message : String(_error)}`);
   }
 }
 
@@ -326,9 +325,9 @@ export async function deleteProduct(code: string): Promise<void> {
     } else {
       console.warn('[ProductService] Produto não encontrado para deleção:', code);
     }
-  } catch (error) {
-    console.error('[ProductService] Erro ao deletar produto:', error);
-    throw new Error('Falha ao deletar produto');
+  } catch (_error) {
+    console.error('[ProductService] Erro ao deletar produto:', _error);
+    throw new Error(`Falha ao deletar produto: ${_error instanceof Error ? _error.message : String(_error)}`);
   }
 }
 
@@ -349,8 +348,8 @@ export async function getProductByCode(code: string): Promise<Product | null> {
       console.log('[ProductService] Produto não encontrado para o código:', code);
       return null;
     }
-  } catch (error) {
-    console.error('[ProductService] Erro ao buscar produto por código:', error);
+  } catch (_error) {
+    console.error('[ProductService] Erro ao buscar produto por código:', _error);
     return null;
   }
 }
@@ -390,8 +389,8 @@ export async function markAsSold(code: string): Promise<void> {
     eventEmitter.emit(PRODUCT_EVENTS.UPDATED);
     
     console.log(`[ProductService] Produto ${code} marcado como vendido e removido com sucesso`);
-  } catch (error) {
-    console.error('[ProductService] Erro ao marcar produto como vendido:', error);
-    throw new Error(`Não foi possível marcar o produto como vendido: ${error instanceof Error ? error.message : String(error)}`);
+  } catch (_error) {
+    console.error('[ProductService] Erro ao marcar produto como vendido:', _error);
+    throw new Error(`Falha ao marcar produto como vendido: ${_error instanceof Error ? _error.message : String(_error)}`);
   }
 } 

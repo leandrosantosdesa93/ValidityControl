@@ -50,7 +50,8 @@ export async function logError(error: AppError, context: string = 'app') {
       details: error.details
     });
     
-    await FileSystem.appendAsStringAsync(ERROR_LOG_FILE, `${logEntry}\n`);
+    const existingContent = await FileSystem.readAsStringAsync(ERROR_LOG_FILE);
+    await FileSystem.writeAsStringAsync(ERROR_LOG_FILE, `${existingContent}${logEntry}\n`);
   } catch (logError) {
     console.error('Falha ao registrar erro', logError);
   }

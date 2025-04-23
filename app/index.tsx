@@ -44,7 +44,7 @@ interface DonutSegment {
   value: number;
 }
 
-function SimpleBarChart({ data, width, height, isDark }: BarChartProps) {
+function SimpleBarChart({ data, width, height, isDark: _isDark }: BarChartProps) {
   // Filtramos apenas os itens com valores > 0 para calcular o máximo
   const itemsWithValues = data.filter(d => d.y > 0);
   const maxValue = Math.max(...itemsWithValues.map(d => d.y), 1); // Garantir que maxValue nunca seja zero
@@ -80,7 +80,7 @@ function SimpleBarChart({ data, width, height, isDark }: BarChartProps) {
           y1={height - 35}
           x2={width - 20}
           y2={height - 35}
-          stroke={isDark ? '#666' : '#ccc'}
+          stroke={_isDark ? '#666' : '#ccc'}
           strokeWidth="1"
         />
       </Svg>
@@ -106,7 +106,7 @@ function SimpleBarChart({ data, width, height, isDark }: BarChartProps) {
   );
 }
 
-function SimpleDonutChart({ data, size, isDark }: DonutChartProps) {
+function SimpleDonutChart({ data, size, isDark: _isDark }: DonutChartProps) {
   const total = data.reduce((sum, item) => sum + item.y, 0);
   const centerX = size / 2;
   const centerY = size / 2;
@@ -114,7 +114,7 @@ function SimpleDonutChart({ data, size, isDark }: DonutChartProps) {
   const strokeWidth = size * 0.1;
 
   let startAngle = 0;
-  const segments: DonutSegment[] = data.map((item, index) => {
+  const segments: DonutSegment[] = data.map((item, _index) => {
     const percentage = item.y / total;
     const angle = percentage * Math.PI * 2;
     

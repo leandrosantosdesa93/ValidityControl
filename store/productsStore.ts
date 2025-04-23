@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '@/types/Product';
-import { getExpirationInfo, getExpirationStats, getMonthlyExpirationData } from '@/utils/expiration';
+import { isAfter, isBefore, startOfDay, addDays, isSameDay } from 'date-fns';
 
 interface ProductsState {
   products: Product[];
@@ -21,8 +21,8 @@ interface ProductsState {
   // Actions
   addProduct: (product: Product) => void;
   updateProduct: (updatedProduct: Product) => void;
-  deleteProduct: (id: string) => void;
-  deleteMultipleProducts: (ids: string[]) => void;
+  deleteProduct: (code: string) => void;
+  deleteMultipleProducts: (codes: string[]) => void;
   getFilteredProducts: (
     query: string, 
     filterExpired?: boolean, 
@@ -32,6 +32,9 @@ interface ProductsState {
   // Loading state
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
+  
+  // Stats update
+  updateStats: () => void;
 }
 
 export const useProductsStore = create<ProductsState>()(
@@ -52,18 +55,26 @@ export const useProductsStore = create<ProductsState>()(
       // Update stats whenever products change
       updateStats: () => {
         const products = get().products;
-        const { expired, expiring, valid } = getExpirationStats(products);
-        const monthlyData = getMonthlyExpirationData(products);
+        const today = startOfDay(new Date());
+        const fiveDaysFromNow = addDays(today, 6);
         
-        set({
-          stats: {
-            expired,
-            expiring,
-            valid,
-            total: products.length,
-            monthlyData,
-          }
-        });
+        const stats = {
+          expired: products.filter(p => isBefore(new Date(p.expirationDate), today)).length,
+          expiring: products.filter(p => {
+            const expDate = new Date(p.expirationDate);
+            return (isSameDay(expDate, today) || isAfter(expDate, today)) && 
+                   isBefore(expDate, fiveDaysFromNow);
+          }).length,
+          valid: products.filter(p => isAfter(new Date(p.expirationDate), fiveDaysFromNow)).length,
+          total: products.length,
+          monthlyData: products.reduce((acc, p) => {
+            const month = new Date(p.expirationDate).toLocaleString('pt-BR', { month: 'long' });
+            acc[month] = (acc[month] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        };
+        
+        set({ stats });
       },
       
       // Actions
@@ -77,7 +88,7 @@ export const useProductsStore = create<ProductsState>()(
       
       updateProduct: (updatedProduct) => {
         set((state) => {
-          const index = state.products.findIndex(p => p.id === updatedProduct.id);
+          const index = state.products.findIndex(p => p.code === updatedProduct.code);
           if (index === -1) return state;
           
           const newProducts = [...state.products];
@@ -87,17 +98,17 @@ export const useProductsStore = create<ProductsState>()(
         get().updateStats();
       },
       
-      deleteProduct: (id) => {
+      deleteProduct: (code) => {
         set((state) => {
-          const newProducts = state.products.filter(p => p.id !== id);
+          const newProducts = state.products.filter(p => p.code !== code);
           return { products: newProducts };
         });
         get().updateStats();
       },
       
-      deleteMultipleProducts: (ids) => {
+      deleteMultipleProducts: (codes) => {
         set((state) => {
-          const newProducts = state.products.filter(p => !ids.includes(p.id));
+          const newProducts = state.products.filter(p => !codes.includes(p.code));
           return { products: newProducts };
         });
         get().updateStats();
@@ -105,6 +116,8 @@ export const useProductsStore = create<ProductsState>()(
       
       getFilteredProducts: (query, filterExpired = false, filterExpiring = false) => {
         const { products } = get();
+        const today = startOfDay(new Date());
+        const fiveDaysFromNow = addDays(today, 6);
         
         return products.filter(product => {
           // Filter by query
@@ -123,10 +136,13 @@ export const useProductsStore = create<ProductsState>()(
           
           // Filter by expiration
           if (filterExpired || filterExpiring) {
-            const { isExpired, daysRemaining } = getExpirationInfo(product.expirationDate);
+            const expDate = new Date(product.expirationDate);
+            const isExpired = isBefore(expDate, today);
+            const isExpiring = (isSameDay(expDate, today) || isAfter(expDate, today)) && 
+                             isBefore(expDate, fiveDaysFromNow);
             
             if (filterExpired && !isExpired) return false;
-            if (filterExpiring && (!(!isExpired && daysRemaining <= 30) || isExpired)) return false;
+            if (filterExpiring && !isExpiring) return false;
           }
           
           return true;
@@ -151,9 +167,7 @@ export const useProductsStore = create<ProductsState>()(
 
 // Middleware para registrar ações
 if (__DEV__) {
-  const originalUseProductsStore = useProductsStore;
-  
-  const logMiddleware = (config: any) => (next: any) => (args: any) => {
+  const logMiddleware = (_config: any) => (next: any) => (args: any) => {
     const stateBeforeAction = useProductsStore.getState();
     console.log('Action:', args);
     const result = next(args);
@@ -164,4 +178,6 @@ if (__DEV__) {
     });
     return result;
   };
+
+  useProductsStore.subscribe(logMiddleware);
 } 
