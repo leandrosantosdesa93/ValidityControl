@@ -1,21 +1,24 @@
 import React from 'react';
-import { Text, StyleSheet, ScrollView } from 'react-native';
-import { RootTabScreenProps } from '../types/navigation';
+import { StyleSheet, ScrollView, Text, View } from 'react-native';
 
-export default function RegisterScreen({ navigation: _navigation }: RootTabScreenProps<'Register'>) {
+export default function RegisterScreen() {
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Cadastrar Novo Produto</Text>
-      {/* TODO: Add product registration form */}
-    </ScrollView>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Text style={styles.title}>Cadastrar Novo Produto</Text>
+        {/* TODO: Add product registration form */}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#fff',
+  },
+  scrollContent: {
+    padding: 16,
   },
   title: {
     fontSize: 24,
